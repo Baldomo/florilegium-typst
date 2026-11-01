@@ -67,3 +67,6 @@ pub fn check_family(prefix: &str) {
 
 #[test]
 fn fmt() { check_family("fmt/"); }
+
+#[test]
+fn ink() { check_family("ink/"); }
