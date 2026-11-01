@@ -2,7 +2,8 @@
 name = "florilegium"
 version = "0.1.0"
 entrypoint = "src/lib.typ"
-authors = ["Kevin Raymond", "Leo"]
+authors = ["Kevin Raymond", "Leo <@Baldomo>"]
+repository = "https://github.com/Baldomo/florilegium-typst"
 license = "MIT"
 description = "Procedurally generated Delft-blue floral page margins."
 categories = ["layout", "visualization"]
