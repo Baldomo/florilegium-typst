@@ -94,9 +94,9 @@
 
 /// The page background: the garden's SVG over the whole paper and its captions, each
 /// placed by its anchor. `none` when the document has no garden.
-#let background(cfg, ..args) = if not cfg.garden { none } else {
+#let background(cfg, resolve: none, ..args) = if not cfg.garden { none } else {
   context {
-    let out = debug(cfg, ..args)
+    let out = if resolve == none { debug(cfg, ..args) } else { debug(cfg, ..resolve(cfg)) }
     place(top + left, image(out.svg, format: "svg", width: page.width, height: page.height))
     for c in out.captions { _caption(c) }
   }

@@ -2,6 +2,7 @@
 // Procedurally generated Delft-blue floral page margins (a port of florilegium).
 
 #import "garden.typ" as _garden
+#import "marks.typ" as _marks
 
 /// The template: `#show: florilegium.with(..)`. It sets the page's margins, header and
 /// footer distances and `page.background`, which it owns: a background set by the user
@@ -52,7 +53,21 @@
     margin: margin,
     header-ascent: headsep,
     footer-descent: calc.max(0pt, footskip - 10pt),
-    background: _garden.background(cfg),
+    background: _garden.background(cfg, resolve: _marks.page-args),
   )
+  show heading: it => {
+    if sections and it.numbering != none and it.level <= 2 {
+      // Under the heading's own text style, a heading probe would be styled twice.
+      let dy = measure(text[H]).height
+      _marks.heading-mark(it.level, dy, it.location())
+    }
+    it
+  }
   body
 }
+
+#let bloom = _marks.bloom
+#let theme = _marks.theme
+#let age = _marks.age
+#let frame = _marks.frame
+#let textend = _marks.textend
