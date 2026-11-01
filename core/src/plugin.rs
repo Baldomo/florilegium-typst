@@ -23,7 +23,8 @@
 //! left); `frame` `{k, n, explain}` with 1 <= k <= n <= 1e6; `nohead` bool; `background` hex?.
 //! An unknown non-empty bloom motif is an error in grown mode.
 //! Out: `{svg: bytes, captions: [{x, y, anchor, size, rotate, color, opacity, markup}],
-//! mirror: bool, stats: str}`. The SVG is the whole page in bp (1 bp = 1 pt) with its
+//! mirror: bool, stats: str, geometry: {pw, ph, textleft, textright, ytop, ybot, colright,
+//! headrule, footy}}`. `geometry` is in cm from the page's lower-left corner, after mirroring. The SVG is the whole page in bp (1 bp = 1 pt) with its
 //! origin at the page's top-left. In captions, `x`, `y` are in pt from the page's top-left
 //! corner, `size` in pt, `rotate` in degrees counterclockwise, `color` "#rrggbb",
 //! `opacity` 0..1, `anchor` a TikZ anchor name, `markup` Typst markup.
@@ -348,7 +349,8 @@ pub fn page_cbor(bytes: &[u8]) -> R<Vec<u8>> {
         }
     }
     let out = svg::page(&p)?;
-    let ph = out.geometry.ph;
+    let g = &out.geometry;
+    let ph = g.ph;
     let captions = out.captions.iter().map(|c| {
         map(vec![
             ("x", flt(c.x_cm * 72.0 / 2.54)), ("y", flt((ph - c.y_cm) * 72.0 / 2.54)),
@@ -360,6 +362,11 @@ pub fn page_cbor(bytes: &[u8]) -> R<Vec<u8>> {
     encode(&map(vec![
         ("svg", Value::Bytes(out.svg.into_bytes())), ("captions", Value::Array(captions)),
         ("mirror", Value::Bool(out.geometry.mirror)), ("stats", text(&out.stats)),
+        ("geometry", map(vec![
+            ("pw", flt(g.pw)), ("ph", flt(g.ph)), ("textleft", flt(g.textleft)), ("textright", flt(g.textright)),
+            ("ytop", flt(g.ytop)), ("ybot", flt(g.ybot)), ("colright", flt(g.colright)),
+            ("headrule", flt(g.headrule)), ("footy", flt(g.footy)),
+        ])),
     ]))
 }
 

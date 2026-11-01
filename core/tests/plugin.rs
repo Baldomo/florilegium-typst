@@ -97,3 +97,13 @@ fn draw_with_lift_takes_the_ghost_path() {
     let w = get(&lifted, "width").as_float().unwrap();
     assert!(w > 0.0 && get(&lifted, "dx").as_float().unwrap() > 0.0);
 }
+
+#[test]
+fn page_returns_its_geometry() {
+    let r = dec(&page_cbor(&enc(&page_args(1))).unwrap());
+    let g = get(&r, "geometry");
+    for k in ["pw", "ph", "textleft", "textright", "ytop", "ybot", "colright", "headrule", "footy"] {
+        assert!(get(g, k).as_float().is_some(), "geometry.{k}");
+    }
+    assert!(get(g, "textright").as_float().unwrap() > get(g, "textleft").as_float().unwrap());
+}
