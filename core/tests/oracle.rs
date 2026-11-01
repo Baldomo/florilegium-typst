@@ -70,3 +70,6 @@ fn fmt() { check_family("fmt/"); }
 
 #[test]
 fn ink() { check_family("ink/"); }
+
+#[test]
+fn flora() { check_family("flora/"); }
