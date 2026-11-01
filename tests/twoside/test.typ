@@ -6,7 +6,7 @@
 
 // the garden is mirrored exactly where the left margin is the narrower one
 #let check() = context {
-  let out = garden.debug(garden.cfg(..args))
+  let out = garden.page-out(garden.cfg(..args))
   // the first layout pass cannot place the context yet (x = 0)
   let x = here().position().x
   if x != 0pt { assert.eq(out.mirror, x < 40mm, message: repr((here().page(), x, out.mirror))) }

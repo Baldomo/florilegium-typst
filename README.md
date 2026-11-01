@@ -124,6 +124,9 @@ primitive's options: `tone`, `w`, `bend`, `side`, `depth`, ...); `#initial(..)`;
   Position, size, rotation, color and opacity are the original's.
 - **Lengths (Dimens rounding).** See the notes below: a length is exactly TeX's for short
   decimals in bp, mm, cm, in and TeX pt and rounded otherwise (at most 1 sp, invisible).
+- **Footer.** `footer-descent` is set to `footskip - 10pt`, an approximation of the original's.
+- **Narrow later margins.** Blooms and garden drawn beyond a narrow margin are clipped, as the original clips its drawing to the column.
+- **Density** below 0.03 behaves as 0.03 (the original's floor when `density < 1`); negative values are accepted.
 - **`textend` semantics.** `#textend()` ends the paragraph and leaves a block-level mark;
   the page it is on grows with spill, from the height of the material above the mark (LaTeX
   measured `\pagetotal + \pagedepth`; Typst also counts the paragraph spacing).
@@ -134,26 +137,9 @@ primitive's options: `tone`, `w`, `bend`, `side`, `depth`, ...); `#initial(..)`;
 - **An unknown primitive** is an error (`florilegium: no primitive '..'`).
 - **Colors.** The plugin accepts `RRGGBB` and `#RRGGBB`; `ink` and `accent` are `rgb` values.
 
-## Wasm against native
-
-The plugin is the same Rust as the native build; Rust's wasm std uses compiler-builtins'
-libm for `sin`, `cos`, `powf`, `exp`, ..., which could differ from glibc's by one ulp. Measured
-with rust 1.99.1 on the `svg.lua --seed N` pages for N = 1..8 (default A4 layout, 2.6 to
-3.1 MB of SVG each): **0 differing bytes** against the native build. Another seed could
-differ in the last digit of a coordinate (the output has one decimal); that is a libm ulp
-and not a drawing difference.
-
-## Performance
-
-A page takes about 1.6 s in the plugin (wasmi interprets the module) and about 2.3 s with its
-3 MB SVG drawn; `typst compile` caches the call, so it is paid once per distinct page.
-Measured (typst 0.15.1, PDF output): `examples/demo.typ`, 4 pages, 4.6 s (1.2 s/page);
-`examples/grown.typ`, 4 pages (sections, an initial, the math theme), 8.4 s (2.1 s/page).
-The native Rust build takes 0.1 s per page.
-
 ## Credits
 
-- florilegium by Kevin Raymond (MIT), the original LaTeX/Lua library this ports.
+- florilegium by Kevin Raymond (MIT): Kevin Raymond wrote the original LaTeX/Lua package this ports.
 - Oklab: Björn Ottosson, "A perceptual color space for image processing" (2020).
 - mulberry32: Tommy Ettinger's public-domain generator.
 - Wong, Zongker and Salesin, "Computer-generated floral ornament", SIGGRAPH 1998: the idea
@@ -188,7 +174,7 @@ Look at rendered pages too: `typst compile examples/demo.typ --root . --format p
 
 ### Lengths: Typst's conversion against TeX's `scan_dimen`
 
-(`geometry.to-sp` now reproduces `scan_dimen` exactly for any length that is a short decimal in bp, mm, cm, in or TeX pt, and rounds only otherwise; the table below is what plain rounding would give.)
+`geometry.to-sp` reproduces `scan_dimen` exactly for any length that is a short decimal in bp, mm, cm, in or TeX pt, and rounds only otherwise. The table below is what plain rounding would give, not what `to-sp` returns for these values.
 
 The core lays the page out in scaled points (sp), the way `svg.lua` and the geometry
 package do, and the Typst layer converts lengths with `round(bp * 72.27/72 * 65536)`.
@@ -222,9 +208,10 @@ pages (2.6 to 3.1 MB each). Rust's wasm std uses compiler-builtins' libm for `si
 `powf`, `exp`, ...; none of the seeds tried shows a one-ulp difference after the 1-decimal
 rounding of the output, but other seeds could, and any such difference is a libm ulp.
 
-Speed: one A4 page takes about 0.1 s natively; the `page` call takes about 1.6 s inside Typst
-(wasmi interprets the module) and a page with its 3 MB SVG drawn about 2.3 s in total.
-`typst compile` caches the call, so it is paid once per distinct page.
+Speed: one A4 page takes about 0.1 s natively and about 1.6 s in the plugin (wasmi interprets
+the module), 2.3 s with its 3 MB SVG drawn; `typst compile` caches the call, so it is paid
+once per distinct page. Measured (typst 0.15.1, PDF): `examples/demo.typ`, 4 pages, 4.6 s;
+`examples/grown.typ`, 4 pages (sections, an initial, the math theme), 8.4 s.
 
 The plugin's CBOR interface (functions, fields, units, caps) is documented in the module
 docs of `core/src/plugin.rs`.

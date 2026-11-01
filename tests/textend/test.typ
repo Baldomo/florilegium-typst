@@ -18,5 +18,5 @@
   assert(e.spilly > 0 and e.spilly < page.height / 1cm)
   assert(calc.abs(ms.last().y - y) < 0.02)
   let cfg = garden.cfg(mode: "grown", seed: 3)
-  assert(garden.debug(cfg, spilly: e.spilly).svg.len() != garden.debug(cfg).svg.len())
+  assert(garden.page-out(cfg, spilly: e.spilly).svg.len() != garden.page-out(cfg).svg.len())
 }

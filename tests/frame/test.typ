@@ -7,8 +7,8 @@
 One
 #context {
   let cfg = garden.cfg(mode: "grown", seed: 3)
-  let plain = garden.debug(cfg).svg
-  let f(k) = garden.debug(cfg, frame: (k: k, n: 3, explain: false)).svg
+  let plain = garden.page-out(cfg).svg
+  let f(k) = garden.page-out(cfg, frame: (k: k, n: 3, explain: false)).svg
   assert.eq(f(3), plain)
   assert(f(1) != plain)
   assert(f(2) != plain)

@@ -8,7 +8,7 @@
 
 // the head rule ends where a full-width line ends
 #context {
-  let out = garden.debug(garden.cfg(..args))
+  let out = garden.page-out(garden.cfg(..args))
   let x = here().position().x
   layout(size => {
     let right = x + size.width

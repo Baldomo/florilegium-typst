@@ -331,7 +331,21 @@ fn canvas_value(c: Canvas, extra: bool) -> Value {
 }
 
 // ---------------------------------------------------------------- the four functions
-pub fn page_cbor(bytes: &[u8]) -> R<Vec<u8>> {
+/// The Lua's "module not found" text for an unknown theme names the Lua file; the plugin's
+/// users get the list of themes instead.
+fn theme_err(e: String) -> String {
+    match e.find("no theme '").and_then(|i| e[i + 10..].find('\'').map(|j| (i, i + 10 + j))) {
+        Some((i, j)) if e.contains("module 'theme-") => format!("florilegium: {} (flora, geometric, math)", &e[i..=j]),
+        _ => e,
+    }
+}
+
+pub fn page_cbor(bytes: &[u8]) -> R<Vec<u8>> { page_inner(bytes).map_err(theme_err) }
+pub fn ornament_cbor(bytes: &[u8]) -> R<Vec<u8>> { ornament_inner(bytes).map_err(theme_err) }
+pub fn draw_cbor(bytes: &[u8]) -> R<Vec<u8>> { draw_inner(bytes).map_err(theme_err) }
+pub fn initial_cbor(bytes: &[u8]) -> R<Vec<u8>> { initial_inner(bytes).map_err(theme_err) }
+
+fn page_inner(bytes: &[u8]) -> R<Vec<u8>> {
     let v = parse(bytes)?;
     let a = as_map(&v, "the arguments")?;
     let mut p = page_args(&a)?;
@@ -372,7 +386,7 @@ pub fn page_cbor(bytes: &[u8]) -> R<Vec<u8>> {
 
 fn ink_accent(a: &Args) -> R<(String, String)> { Ok((hex(a, "ink")?, hex(a, "accent")?)) }
 
-pub fn ornament_cbor(bytes: &[u8]) -> R<Vec<u8>> {
+fn ornament_inner(bytes: &[u8]) -> R<Vec<u8>> {
     let v = parse(bytes)?;
     let a = as_map(&v, "the arguments")?;
     let name = a.text_req("name")?;
@@ -386,7 +400,7 @@ pub fn ornament_cbor(bytes: &[u8]) -> R<Vec<u8>> {
     encode(&canvas_value(canvas(&s)?, true))
 }
 
-pub fn draw_cbor(bytes: &[u8]) -> R<Vec<u8>> {
+fn draw_inner(bytes: &[u8]) -> R<Vec<u8>> {
     let v = parse(bytes)?;
     let a = as_map(&v, "the arguments")?;
     let name = a.text_req("name")?;
@@ -406,7 +420,7 @@ pub fn draw_cbor(bytes: &[u8]) -> R<Vec<u8>> {
     encode(&canvas_value(canvas(&s)?, true))
 }
 
-pub fn initial_cbor(bytes: &[u8]) -> R<Vec<u8>> {
+fn initial_inner(bytes: &[u8]) -> R<Vec<u8>> {
     let v = parse(bytes)?;
     let a = as_map(&v, "the arguments")?;
     let letter = a.text_req("letter")?;

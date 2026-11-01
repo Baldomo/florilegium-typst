@@ -4,4 +4,4 @@
 #lorem(70)
 
 #import "/src/garden.typ"
-#context assert(garden.debug(garden.cfg(mode: "grown", seed: 5, theme: "math")).captions.len() > 0)
+#context assert(garden.page-out(garden.cfg(mode: "grown", seed: 5, theme: "math")).captions.len() > 0)

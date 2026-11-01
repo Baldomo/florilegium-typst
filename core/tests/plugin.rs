@@ -11,7 +11,7 @@ fn err(r: Result<Vec<u8>, String>) -> String { match r { Err(e) => e, Ok(_) => p
 fn plugin_errors() {
     let page = |k: &str, v| enc(&with(page_args(1), k, v));
     let e = err(page_cbor(&page("theme", t("nope"))));
-    assert!(e.starts_with("florilegium: ") && e.contains("no theme 'nope'"), "{e}");
+    assert!(e == "florilegium: no theme 'nope' (flora, geometric, math)", "{e}");
     let e = err(page_cbor(&page("density", f(f64::NAN))));
     assert!(e.starts_with("florilegium: "), "{e}");
     let e = err(page_cbor(&page("page", i(0))));

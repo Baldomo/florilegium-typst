@@ -59,10 +59,10 @@
 /// `page(margin: ..)` takes: `auto` (2.5/21 of the shorter side), a length or ratio, or a
 /// dictionary with `left`, `right`, `top`, `bottom`, `x`, `y`, `inside`, `outside` and
 /// `rest`. `inside` is the left margin of an odd (right-hand) page; with `even: true` the
-/// page is a left-hand one and inside/outside swap. Ratios are relative to the page's
+/// page is a left-hand one and inside/outside swap; with `binding: right` they swap again. Ratios are relative to the page's
 /// width (left, right) or height (top, bottom).
 /// Needs a context (`em` lengths).
-#let resolve-margin(margin, width, height, even: false) = {
+#let resolve-margin(margin, width, height, even: false, binding: left) = {
   let side(v, of) = if v == auto {
     2.5 / 21 * calc.min(width, height)
   } else if type(v) == ratio {
@@ -79,7 +79,7 @@
     }
     m.at("rest", default: auto)
   }
-  let (inner, outer) = if even { ("outside", "inside") } else { ("inside", "outside") }
+  let (inner, outer) = if even != (binding == right) { ("outside", "inside") } else { ("inside", "outside") }
   (
     left: side(get("left", inner, "x"), width),
     right: side(get("right", outer, "x"), width),

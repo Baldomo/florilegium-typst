@@ -83,7 +83,7 @@
 // effect on this page. Needs a context.
 #let _setting(ink, accent, theme) = {
   let cfg = _garden.cfg-state.get()
-  let hex(c) = _garden._hex(c).trim("#", at: start)
+  let hex(c) = _garden._hex(c)
   let pick(v, key) = if v != none { hex(v) } else if cfg != none { hex(cfg.at(key)) } else { "" }
   (
     ink: pick(ink, "ink"), accent: pick(accent, "accent"),

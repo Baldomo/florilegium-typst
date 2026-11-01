@@ -15,8 +15,8 @@ First line.
   let y = (h - locate(<probe>).position().y) / 1cm
   assert(calc.abs(m.y - y) < 0.02, message: repr((m.y, y)))
   let cfg = garden.cfg(mode: "grown", seed: 3)
-  let a = garden.debug(cfg, marks: (m,))
-  let b = garden.debug(cfg)
+  let a = garden.page-out(cfg, marks: (m,))
+  let b = garden.page-out(cfg)
   assert(a.svg.len() != b.svg.len())
 }
 

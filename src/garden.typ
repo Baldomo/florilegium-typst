@@ -50,10 +50,11 @@
 /// `seed:` is the logical page number.
 /// `marks`, `theme` (the effective theme), `age`, `frame` and `spilly` are what the marks
 /// layer supplies per page.
-#let debug(cfg, marks: (), theme: auto, age: none, frame: none, spilly: none) = {
+#let page-out(cfg, marks: (), theme: auto, age: none, frame: none, spilly: none) = {
   let (w, h) = (page.width, page.height)
   if w == auto or h == auto { panic("florilegium: the page needs a fixed width and height") }
-  let margins = geometry.resolve-margin(page.margin, w, h, even: calc.even(here().page()))
+  let binding = if page.binding == auto { if text.dir == rtl { right } else { left } } else { page.binding }
+  let margins = geometry.resolve-margin(page.margin, w, h, even: calc.even(here().page()), binding: binding)
   let number = counter(page).get().first()
   core.page((
     page: calc.clamp(number, 1, 1000000),
@@ -99,7 +100,7 @@
 /// placed by its anchor. `none` when the document has no garden.
 #let background(cfg, resolve: none, ..args) = if not cfg.garden { none } else {
   context {
-    let out = if resolve == none { debug(cfg, ..args) } else { debug(cfg, ..resolve(cfg)) }
+    let out = if resolve == none { page-out(cfg, ..args) } else { page-out(cfg, ..resolve(cfg)) }
     place(top + left, image(out.svg, format: "svg", width: page.width, height: page.height))
     for c in out.captions { _caption(c) }
   }
