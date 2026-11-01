@@ -1014,4 +1014,192 @@ end, function(id)
   return finish(out)
 end)
 
+-- ---------------------------------------------------------------- page glue and SVG
+-- florilegium.lua and svg.lua under the TeX stubs. An id after the family is a list of
+-- `key=value` or bare `flag` segments, which become `--key value` / `--flag` for svg.lua's
+-- own command line parser: `svg/seed=7/theme=math/twoside` is `svg.lua --seed 7 --theme math --twoside`.
+node.id = function(name) return name end
+node.subtype = function(name) return name end
+local fl = require("florilegium")
+
+local function svg_argv(rest)
+  local argv = {}
+  for seg in rest:gmatch("[^/]+") do
+    local k, v = seg:match("^([^=]+)=(.*)$")
+    if k then argv[#argv + 1] = "--" .. k argv[#argv + 1] = v else argv[#argv + 1] = "--" .. seg end
+  end
+  return argv
+end
+
+-- svg.lua's main, with its standard streams captured; hook(page results) sees what page() returns
+local function svg_main(argv, hook)
+  local buf = {}
+  local so, se = io.stdout, io.stderr
+  local orig = svg.page
+  io.stdout = { write = function(_, s) buf[#buf + 1] = s end }
+  io.stderr = { write = function() end }
+  if hook then svg.page = function(o) local a, b, c = orig(o) hook(a, b, c) return a, b, c end end
+  local ok, code = pcall(svg.main, argv)
+  io.stdout, io.stderr, svg.page = so, se, orig
+  if not ok then error(code, 0) end
+  if code ~= 0 then error("svg.lua failed: " .. table.concat(argv, " "), 0) end
+  return table.concat(buf)
+end
+
+-- what tools/ornament.lua does with the streams of one primitive
+local function standalone(streams)
+  local s = table.concat(streams, "\n")
+  local x0, y0, x1, y1 = math.huge, math.huge, -math.huge, -math.huge
+  for x, y in s:gmatch("(%-?[%d.]+) (%-?[%d.]+) [mlc]") do
+    x, y = tonumber(x), tonumber(y)
+    x0, x1, y0, y1 = math.min(x0, x), math.max(x1, x), math.min(y0, y), math.max(y1, y)
+  end
+  local pad = 1
+  local parts = svg.translate(s, {}, "o")
+  return sfmt('<svg xmlns="http://www.w3.org/2000/svg" viewBox="%.1f %.1f %.1f %.1f"><g transform="matrix(1 0 0 -1 0 %.1f)" stroke-linecap="round" stroke-linejoin="round">\n%s\n</g></svg>\n',
+    x0 - pad, -y1 - pad, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad, 0, table.concat(parts, "\n"))
+end
+
+local SVG_CASES = {}
+for s = 1, 8 do SVG_CASES[#SVG_CASES + 1] = "seed=" .. s end
+for _, c in ipairs({ "authored/seed=3", "page=3", "seed=2/season=spring", "seed=2/season=autumn", "seed=2/season=0.3",
+    "seed=2/theme=geometric", "seed=2/theme=math", "seed=2/density=0.4", "seed=2/density=0.05", "seed=2/intensity=0.5",
+    "seed=2/intensity=0", "seed=2/novisitors", "seed=2/twoside/page=2", "seed=2/textend=120mm", "seed=2/nohead",
+    "seed=2/ink=5B2A1F/accent=2F6B3A", "seed=2/paper=letter", "seed=2/paper=a5", "seed=2/paper=160x240",
+    "seed=2/left=50mm/right=30mm", "seed=2/background=FFFDF5" }) do
+  SVG_CASES[#SVG_CASES + 1] = c
+end
+local CAPTION_CASES = { "seed=1/theme=math", "seed=3/theme=math", "seed=2/theme=math/twoside/page=2",
+  "seed=2/theme=math/intensity=0.5", "seed=2", "seed=1/authored" }
+
+local FRAME_OPTS = {
+  summer = {}, spring = { "season=0.05" }, autumn = { "season=0.95" }, geometric = { "theme=geometric" },
+  ["geometric-autumn-mirrored"] = { "theme=geometric", "season=0.95", "twoside", "page=2" },
+  ["density-0.4"] = { "density=0.4" }, ["density-0.05"] = { "density=0.05" }, math = { "theme=math" },
+  ["math-mirrored-density-0.3"] = { "theme=math", "twoside", "page=2", "density=0.3" },
+}
+local FRAME_ORDER = { "summer", "spring", "autumn", "geometric", "geometric-autumn-mirrored", "density-0.4",
+  "density-0.05", "math", "math-mirrored-density-0.3" }
+
+local ORN_NAMES = { "leaf", "leaflet", "petal", "bud", "bell", "sprig", "cyme", "umbel", "tendril", "flower", "blossom",
+  "floret", "lily", "seedhead", "butterfly", "bee", "snail", "bird", "sparkle", "rosette", "hedera" }
+
+M.register("svg", function()
+  local ids = {}
+  for _, c in ipairs(SVG_CASES) do ids[#ids + 1] = "svg/" .. c end
+  return ids
+end, function(id)
+  return svg_main(svg_argv(id:match("^svg/(.*)$")))
+end)
+
+M.register("captions", function()
+  local ids = {}
+  for _, c in ipairs(CAPTION_CASES) do ids[#ids + 1] = "captions/" .. c end
+  return ids
+end, function(id)
+  local more
+  svg_main(svg_argv(id:match("^captions/(.*)$")), function(_, _, m) more = m end)
+  local out = {}
+  for _, c in ipairs(more.captions) do
+    out[#out + 1] = sfmt("%.6f %.6f %s %.6f %.6f %s %.6f %s", c.x, c.y, c.anchor, c.size, c.rotate, c.color, c.opacity, c.tex)
+  end
+  local st = more.stats
+  if st then
+    out[#out + 1] = ("motifs %d stems %d cells %d"):format(st.motifs, st.stems, st.cells)
+    for _, k in ipairs(sorted_keys(st.counts)) do out[#out + 1] = ("count %s %d"):format(k, st.counts[k]) end
+  end
+  return table.concat(out, "\n") .. "\n"
+end)
+
+M.register("frame", function()
+  local ids = {}
+  for _, name in ipairs(FRAME_ORDER) do
+    for _, k in ipairs({ 1, 4, 8 }) do ids[#ids + 1] = ("frame/case=%s/k=%d/n=8"):format(name, k) end
+  end
+  for _, name in ipairs({ "summer", "autumn", "math" }) do ids[#ids + 1] = ("frame/case=%s/k=4/n=8/explain"):format(name) end
+  return ids
+end, function(id)
+  local name, k, n, tail = id:match("^frame/case=([^/]+)/k=(%d+)/n=(%d+)(.*)$")
+  local explain = tail == "/explain"
+  local opts = FRAME_OPTS[name]
+  if not opts then error("bad frame id: " .. id) end
+  fl.frame(tonumber(k), tonumber(n), explain and "explain" or nil)
+  return svg_main(svg_argv("seed=2/" .. table.concat(opts, "/")))
+end)
+
+-- primitives drawn from the glue, as the TeX side calls them
+local function glue_env()
+  tex.dimen = { ["pgf@pt@x"] = 0, ["pgf@pt@y"] = 0 }
+  tex.error = function(m) error(m, 0) end
+  local pgf = { ["pgf@pt@aa"] = "1", ["pgf@pt@ab"] = "0", ["pgf@pt@ba"] = "0", ["pgf@pt@bb"] = "1" }
+  token = { get_macro = function(n) return pgf[n] end }
+end
+local function kv_of(rest)
+  local kv = {}
+  for key, v in rest:gmatch("([^/=]+)=([^/]*)") do kv[key] = v end
+  return kv
+end
+
+M.register("ornament", function()
+  local ids = {}
+  for _, name in ipairs(ORN_NAMES) do
+    ids[#ids + 1] = ("ornament/%s/size=786432/angle=0/seed=3"):format(name)
+    ids[#ids + 1] = ("ornament/%s/size=1500000/angle=20/count=1"):format(name)
+  end
+  ids[#ids + 1] = "ornament/crystal/size=786432/angle=0/seed=5/theme=geometric"
+  ids[#ids + 1] = "ornament/flower/size=786432/angle=10/seed=2/theme=geometric"
+  ids[#ids + 1] = "ornament/rose/size=786432/angle=0/seed=2/theme=math"
+  ids[#ids + 1] = "ornament/flower/size=786432/angle=0/count=4"
+  ids[#ids + 1] = "ornament/bird/size=786432/angle=-15/seed=9/ink=5B2A1F/accent=2F6B3A"
+  return ids
+end, function(id)
+  local name, rest = id:match("^ornament/([^/]+)/(.*)$")
+  local kv = kv_of(rest)
+  glue_env()
+  fl.theme = kv.theme
+  local count = tonumber(kv.count) or 1
+  for _ = 1, count do
+    common.reset()
+    fl.ornament(name, tonumber(kv.size), kv.ink or "", kv.accent or "", tonumber(kv.angle), tonumber(kv.seed))
+  end
+  fl.theme = nil
+  return standalone({ common.streams() })
+end)
+
+M.register("draw", function()
+  local ids = {}
+  for _, name in ipairs(ORN_NAMES) do ids[#ids + 1] = ("draw/%s/s=1.2/seed=3"):format(name) end
+  for _, c in ipairs({ "draw/leaf/s=1.8/seed=2", "draw/cyme/s=1.2/seed=4/side=-1", "draw/seedhead/s=1/seed=4/drift=0",
+      "draw/bee/s=1/seed=4/trail=false", "draw/crystal/s=1.2/seed=3/theme=geometric",
+      "draw/flower/s=1.2/seed=3/theme=geometric", "draw/hedera/s=1/seed=3/theme=geometric",
+      "draw/rose/s=1.2/seed=2/theme=math", "draw/hedera/s=1/seed=2/theme=math",
+      "draw/ghost/inner=flower/s=1.4/seed=3", "draw/ghost/inner=lily/s=1.2/seed=3/lift=0.4",
+      "draw/ghost/inner=crystal/s=1.2/seed=3/theme=geometric", "draw/flower/s=1.2/seed=3/ink=5B2A1F/accent=2F6B3A" }) do
+    ids[#ids + 1] = c
+  end
+  return ids
+end, function(id)
+  local name, rest = id:match("^draw/([^/]+)/(.*)$")
+  local kv = kv_of(rest)
+  glue_env()
+  fl.theme = kv.theme
+  fl.seed(1, tonumber(kv.seed))
+  local o = { lift = tonumber(kv.lift), side = tonumber(kv.side), drift = tonumber(kv.drift) }
+  if kv.trail == "false" then o.trail = false end
+  if kv.ink or kv.accent then
+    local function hexc(h) return tonumber(h:sub(1, 2), 16) / 255, tonumber(h:sub(3, 4), 16) / 255, tonumber(h:sub(5, 6), 16) / 255 end
+    local ir, ig, ib = hexc(kv.ink or "2456C4")
+    local ar, ag, ab = hexc(kv.accent or "B4662F")
+    fl.colors(ir, ig, ib, ar, ag, ab)
+  end
+  if name == "ghost" then
+    o.s = tonumber(kv.s)
+    fl.draw("ghost", kv.inner, o)
+  else
+    fl.draw(name, tonumber(kv.s), o)
+  end
+  fl.theme = nil
+  return standalone({ common.streams() })
+end)
+
 return M

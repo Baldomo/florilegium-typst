@@ -92,6 +92,21 @@ fn math() { check_family("math/"); }
 #[test]
 fn initial() { check_family("initial/"); }
 
+#[test]
+fn svg() { check_family("svg/"); }
+
+#[test]
+fn captions() { check_family("captions/"); }
+
+#[test]
+fn frame() { check_family("frame/"); }
+
+#[test]
+fn ornament() { check_family("ornament/"); }
+
+#[test]
+fn draw() { check_family("draw/"); }
+
 /// the outlines read with ttf-parser equal what luaotfload's loadshapes reports
 #[test]
 fn shapes() {

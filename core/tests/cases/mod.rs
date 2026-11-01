@@ -9,6 +9,7 @@ mod grow;
 mod initial;
 mod ink;
 mod math;
+mod svg;
 
 pub fn initial_dump() -> florilegium_core::initial::Shapes { initial::dump() }
 
@@ -23,6 +24,7 @@ pub fn run_case(id: &str) -> Result<String, String> {
         "initial" => initial::run(id),
         "ink" => ink::run(id),
         "math" => math::run(id),
+        "svg" | "captions" | "frame" | "ornament" | "draw" => svg::run(id),
         _ => Err(format!("unknown case family in id {id:?}")),
     }
 }

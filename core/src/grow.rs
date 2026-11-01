@@ -66,7 +66,9 @@ pub fn layers() -> Layers {
 }
 
 // ---------------------------------------------------------------- the page table
+#[derive(Clone, Debug, PartialEq)]
 pub enum MarkKind { Heading(i32), Bloom(String) }
+#[derive(Clone, Debug, PartialEq)]
 pub struct Mark { pub kind: MarkKind, pub y: f64 }
 
 /// The page table `g`. `spill` is 0 or 1; `mirror` is Lua's `g.mirror` truthiness.
