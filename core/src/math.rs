@@ -15,7 +15,7 @@ use std::rc::Rc;
 
 fn tone(t: f64) -> ink::Color { ink::tone(t) }
 
-const GLYPHS: [&str; 53] = [
+pub const GLYPHS: [&str; 53] = [
     "\\mathrm{A}", "\\mathrm{M}", "\\mathrm{Q}", "\\mathrm{B}", "\\mathrm{D}", "\\mathcal{F}", "\\mathcal{L}", "\\mathcal{R}",
     "x", "y", "n", "k", "e", "i", "z",
     "0", "1", "2", "3", "4", "5", "7", "8", "9",
@@ -24,7 +24,7 @@ const GLYPHS: [&str; 53] = [
     "\\displaystyle\\int", "\\displaystyle\\sum", "\\displaystyle\\prod", "\\displaystyle\\oint", "\\sqrt{\\;}",
 ];
 
-const EQUATIONS: [&str; 23] = [
+pub const EQUATIONS: [&str; 23] = [
     "e^{i\\pi}+1=0", "a^2+b^2=c^2", "\\varphi^2=\\varphi+1", "V-E+F=2", "i^2=-1",
     "\\sum_{n\\ge1}\\frac{1}{n^2}=\\frac{\\pi^2}{6}", "\\int_{-\\infty}^{\\infty}e^{-x^2}dx=\\sqrt{\\pi}",
     "F_{n+1}=F_n+F_{n-1}", "\\cos^2\\theta+\\sin^2\\theta=1", "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}",

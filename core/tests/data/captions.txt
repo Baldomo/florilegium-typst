@@ -1,0 +1,202 @@
+$!$
+$($
+$)$
+$+$
+$-$
+$0$
+$1$
+$1+2+\cdots+n=\frac{n(n+1)}{2}$
+$137.0^\circ$
+$137.3^\circ$
+$137.7^\circ$
+$138.0^\circ$
+$2$
+$2^{\aleph_0}>\aleph_0$
+$3$
+$4$
+$5$
+$7$
+$8$
+$9$
+$=$
+$F_{n+1}=F_n+F_{n-1}$
+$T_{2,3}$
+$T_{2,5}$
+$T_{2,7}$
+$T_{2,9}$
+$V-E+F=2$
+$[$
+$\Delta$
+$\Omega$
+$\Sigma$
+$\aleph$
+$\alpha=137.5^\circ$
+$\approx$
+$\cos^2\theta+\sin^2\theta=1$
+$\delta=0$
+$\delta=\frac{3\pi}{8}$
+$\delta=\frac{\pi}{2}$
+$\delta=\frac{\pi}{4}$
+$\delta=\frac{\pi}{8}$
+$\dim=\log_3 4$
+$\displaystyle\int$
+$\displaystyle\oint$
+$\displaystyle\prod$
+$\displaystyle\sum$
+$\frac{d}{dx}e^x=e^x$
+$\in$
+$\infty$
+$\int_{-\infty}^{\infty}e^{-x^2}dx=\sqrt{\pi}$
+$\lambda$
+$\le$
+$\lim_{n\to\infty}\bigl(1+\frac1n\bigr)^n=e$
+$\mathcal{F}$
+$\mathcal{L}$
+$\mathcal{R}$
+$\mathrm{A}$
+$\mathrm{B}$
+$\mathrm{D}$
+$\mathrm{M}$
+$\mathrm{Q}$
+$\nabla$
+$\oint_C f\,dz=0$
+$\partial$
+$\pi$
+$\pi\approx\frac{355}{113}$
+$\pm$
+$\sqrt{\;}$
+$\sum_{n\ge1}\frac{1}{n^2}=\frac{\pi^2}{6}$
+$\theta$
+$\times$
+$\varphi = \frac{1+\sqrt5}{2}$
+$\varphi$
+$\varphi^2=\varphi+1$
+$\zeta(s)=\prod_p\frac{1}{1-p^{-s}}$
+$\{3,4\}$
+$\{3,5\}$
+$\{4,3\}$
+$\{5,3\}$
+$]$
+$a^2+b^2=c^2$
+$d=19^\circ$
+$d=1^\circ$
+$d=29^\circ$
+$d=47^\circ$
+$d=71^\circ$
+$d=\frac12r$
+$d=\frac14r$
+$d=\frac34r$
+$d=\frac54r$
+$d=r$
+$e$
+$e=\sum_{n\ge0}\frac{1}{n!}$
+$e^x=\sum_{n\ge0}\frac{x^n}{n!}$
+$e^{i\pi}+1=0$
+$i$
+$i^2=-1$
+$k$
+$k=1$
+$k=2$
+$k=3$
+$k=4$
+$k=\frac{3}{2}$
+$k=\frac{5}{2}$
+$k=\frac{7}{2}$
+$k\mapsto 2k \bmod 100$
+$k\mapsto 2k \bmod 120$
+$k\mapsto 2k \bmod 150$
+$k\mapsto 3k \bmod 100$
+$k\mapsto 3k \bmod 120$
+$k\mapsto 3k \bmod 150$
+$k\mapsto 4k \bmod 100$
+$k\mapsto 4k \bmod 120$
+$k\mapsto 4k \bmod 150$
+$k\mapsto mk \bmod 100$
+$k\mapsto mk \bmod 120$
+$k\mapsto mk \bmod 150$
+$m=2$
+$m=3$
+$m=4$
+$m=5$
+$m=6$
+$n$
+$n=0$
+$n=1$
+$n=12$
+$n=2$
+$n=24$
+$n=3$
+$n=4$
+$n=6$
+$n=8$
+$n=\frac12$
+$n=\frac32$
+$n\sin\frac{\pi}{n}\to\pi$
+$r=\cos k\theta$
+$r=\sin 2\theta$, $d=39^\circ$
+$r=\sin 3\theta$, $d=47^\circ$
+$r=\sin 4\theta$, $d=31^\circ$
+$r=\sin 5\theta$, $d=97^\circ$
+$r=\sin 6\theta$, $d=71^\circ$
+$r=\sin 7\theta$, $d=19^\circ$
+$r\{4,3\}$
+$r\{5,3\}$
+$r_n = c\sqrt n$, $\theta_n = 137.5^\circ n$
+$t\{3,4\}$
+$t\{3,5\}$
+$t\{4,3\}$
+$t\{5,3\}$
+$x$
+$x=\frac{-b\pm\sqrt{b^2-4ac}}{2a}$
+$x=\sin 3t,\ y=\sin 2t$
+$x=\sin 3t,\ y=\sin 4t$
+$x=\sin 4t,\ y=\sin 3t$
+$x=\sin 5t,\ y=\sin 2t$
+$x=\sin 5t,\ y=\sin 4t$
+$x=\sin 5t,\ y=\sin 6t$
+$x=\sin t,\ y=\sin 2t$
+$x=\sin(3t+\delta)$, $y=\sin 2t$
+$x=\sin(3t+\delta)$, $y=\sin 4t$
+$x=\sin(5t+\delta)$, $y=\sin 4t$
+$x=\sin(t+\delta)$, $y=\sin 2t$
+$x^2 = 4fy$
+$y$
+$z$
+$z\mapsto z^2+c$
+$|x|^n+|y|^n=1$
+Apollonian gasket
+Archimedes: $n\sin\frac{\pi}{n}\to\pi$
+Fay's butterfly curve
+Hilbert curve
+Hilbert curves
+Koch snowflake
+Koch snowflake, $\dim = \log_3 4$
+Maurer roses $r=\sin 2\theta$
+Maurer roses $r=\sin 4\theta$
+Maurer roses $r=\sin 6\theta$
+Petersen graph, $\chi = 3$
+Vogel's disc: floret $n$ at $n\alpha$
+cinquefoil $5_1$
+cube $\{4,3\}$
+dodecahedron $\{5,3\}$
+figure-eight knot $4_1$
+from the cube to its dual
+from the dodecahedron to its dual
+hypotrochoid $5:2$
+hypotrochoid $5:3$
+hypotrochoid $7:3$
+hypotrochoid $7:4$
+hypotrochoid $8:3$
+hypotrochoid $9:4$
+hypotrochoids $5:2$
+hypotrochoids $5:3$
+hypotrochoids $7:4$
+hypotrochoids $8:3$
+icosahedron $\{3,5\}$
+octahedron $\{3,4\}$
+tetrahedron $\{3,3\}$
+torus knot $7_1$
+torus knot $9_1$
+torus knot $T_{3,4}$
+torus knots
+trefoil $3_1$

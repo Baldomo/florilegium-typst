@@ -7,6 +7,7 @@ pub mod geometric;
 pub mod grow;
 pub mod ink;
 pub mod math;
+pub mod tex;
 
 /// Puts every piece of thread-local state back to what a fresh Lua process has.
 pub fn reset() {
