@@ -19,3 +19,10 @@ First line.
   let b = garden.debug(cfg)
   assert(a.svg.len() != b.svg.len())
 }
+
+#context {
+  assert.eq(measure[x#bloom(),].width, measure[x,].width)
+  assert.eq(measure[x#bloom(motif: "lily"),].width, measure[x,].width)
+  assert.eq(measure[x#metadata(0)<florilegium-mark>,].width, measure[x,].width)
+  assert(query(<florilegium-mark>).len() >= 1)
+}

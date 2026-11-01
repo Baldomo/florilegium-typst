@@ -130,6 +130,7 @@ primitive's options: `tone`, `w`, `bend`, `side`, `depth`, ...); `#initial(..)`;
 - **Aging.** A page takes the last `age` / `frame` mark on or before it. With `aging: true`
   the season follows the page and the last page (`counter(page).final()`), and wins over
   `age` marks, as in LaTeX; no second run is needed, Typst converges by itself.
+- **Math-theme equations** along the bottom can touch or overlap, as in the original, whose spacing uses a rough width estimate (0.2 cm per character); Typst's widths match TeX's within 0.1 cm.
 - **An unknown primitive** is an error (`florilegium: no primitive '..'`).
 - **Colors.** The plugin accepts `RRGGBB` and `#RRGGBB`; `ink` and `accent` are `rgb` values.
 

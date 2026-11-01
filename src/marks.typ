@@ -2,7 +2,7 @@
 // Marks: positions in the text that steer the garden (headings, blooms, theme, age,
 // animation frames, the end of the text), the counterpart of florilegium.mark.
 
-#let _mark(kind, arg, ..extra) = [#metadata((kind: kind, arg: arg, ..extra.named())) <florilegium-mark>]
+#let _mark(kind, arg, ..extra) = [#metadata((kind: kind, arg: arg, ..extra.named()))<florilegium-mark>]
 
 /// A bloom beside this line (inline: y is the line's baseline); `motif` "" lets the garden choose.
 #let bloom(motif: "") = [#h(0pt)#_mark("bloom", motif)]
