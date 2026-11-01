@@ -210,8 +210,8 @@ fn draw(name: &str, out: &mut String) -> Result<(), String> {
             let t = |e: &Rc<RefCell<ink::EventData>>, from, to, overlay| Tag { event: e.clone(), from, to, overlay };
             poly(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]], true); fill(tone(0.1), None, false);
             record(true);
-            let e1 = Rc::new(RefCell::new(ink::EventData { t0: 0.0, dur: 1.0 }));
-            let e2 = Rc::new(RefCell::new(ink::EventData { t0: 1.0, dur: 2.0 }));
+            let e1 = Rc::new(RefCell::new(ink::EventData { t0: 0.0, dur: 1.0, ..Default::default() }));
+            let e2 = Rc::new(RefCell::new(ink::EventData { t0: 1.0, dur: 2.0, ..Default::default() }));
             say(out, &[if tag(Some(t(&e1, 0.0, None, false))).is_none() { 1.0 } else { 0.0 }]);
             circle(1.0, 1.0, 1.0); fill(tone(0.2), None, false);
             let old = tag(Some(t(&e1, 0.5, Some(1.0), false))).unwrap();

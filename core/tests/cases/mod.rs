@@ -3,6 +3,7 @@
 mod figures;
 mod flora;
 mod fmt;
+mod grow;
 mod ink;
 
 pub fn run_case(id: &str) -> Result<String, String> {
@@ -10,6 +11,7 @@ pub fn run_case(id: &str) -> Result<String, String> {
         "figures" => figures::run(id),
         "flora" => flora::run(id),
         "fmt" => fmt::run(id),
+        "grow" => grow::run(id),
         "ink" => ink::run(id),
         _ => Err(format!("unknown case family in id {id:?}")),
     }

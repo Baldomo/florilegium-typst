@@ -600,4 +600,74 @@ end, function(id)
   return finish(out)
 end)
 
+-- ---------------------------------------------------------------- grow
+-- the geometry of tools/ident.lua; `anim` cases replay the recording as animcheck.lua does
+local grow = require("grow")
+local GROW_MARKS = { { kind = "heading", arg = 1, y = 20 }, { kind = "heading", arg = 2, y = 14 }, { kind = "bloom", arg = "", y = 9 }, { kind = "bloom", arg = "umbel", y = 6 } }
+local GROW_CASES = {
+  { name = "summer" },
+  { name = "novis", visitors = false },
+  { name = "spring", age = 0.05 },
+  { name = "autumn-marks", age = 0.95, marks = GROW_MARKS },
+  { name = "density-0.4", density = 0.4 },
+  { name = "density-0.05", density = 0.05 },
+  { name = "density-1", density = 1 },
+  { name = "age-0.5", age = 0.5 },
+  { name = "mirror", mirror = true, marks = GROW_MARKS },
+}
+local GROW_SEEDS = { 1, 2, 3, 6, 7 }
+
+M.register("grow", function()
+  local ids = {}
+  for _, prefix in ipairs({ "grow", "grow/anim" }) do
+    for _, seed in ipairs(GROW_SEEDS) do
+      for spill = 0, 1 do
+        for _, c in ipairs(GROW_CASES) do ids[#ids + 1] = ("%s/seed=%d/spill=%d/case=%s"):format(prefix, seed, spill, c.name) end
+      end
+    end
+  end
+  return ids
+end, function(id)
+  local anim, seed, spill, name = false, nil, nil, nil
+  local rest = id:match("^grow/anim/(.*)$")
+  if rest then anim = true else rest = id:match("^grow/(.*)$") end
+  seed, spill, name = rest:match("^seed=(%d+)/spill=(%d)/case=(.+)$")
+  local case
+  for _, c in ipairs(GROW_CASES) do if c.name == name then case = c end end
+  if not case then error("bad grow id: " .. id) end
+  seed, spill = tonumber(seed), tonumber(spill)
+  local g = { pw = 21, ph = 29.7, textleft = 6.8, textright = 18.8, ytop = 25.4, ybot = 3.0 }
+  g.colright, g.headrule, g.footy = g.textleft - 0.4, g.ytop + 0.7, 1.9
+  g.seed, g.spill, g.spilly = seed, spill, spill == 1 and 19.0 or 0
+  g.age, g.marks, g.visitors, g.density, g.mirror = case.age, case.marks, case.visitors, case.density, case.mirror
+  local out = {}
+  if not anim then
+    local r = grow.page(g)
+    out[#out + 1] = ("motifs %d stems %d cells %d"):format(r.stats.motifs, r.stats.stems, r.stats.cells)
+    for _, k in ipairs(sorted_keys(r.stats.counts)) do out[#out + 1] = ("count %s %d"):format(k, r.stats.counts[k]) end
+    return finish(out)
+  end
+  g.anim = true
+  local r = grow.page(g)
+  local function frame(t, explain)
+    ink.emit(r.rec, function(tag)
+      if tag.overlay and not explain then return false end
+      local e = tag[1]
+      local p = (t - e.t0) / e.dur
+      return p >= tag[2] and (tag[3] == nil or p < tag[3])
+    end)
+  end
+  frame(math.huge) frame(r.total * 0.5, true)
+  local events, seen = {}, {}
+  ink.emit(r.rec, function(tag)
+    local e = tag[1]
+    if not seen[e] then seen[e] = true events[#events + 1] = e end
+    return false
+  end)
+  out[#out + 1] = "total " .. G(r.total)
+  out[#out + 1] = "events " .. #events
+  for _, e in ipairs(events) do out[#out + 1] = G(e.t0) .. " " .. G(e.dur) end
+  return finish(out)
+end)
+
 return M

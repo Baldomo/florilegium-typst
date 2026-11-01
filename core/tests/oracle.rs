@@ -76,3 +76,6 @@ fn flora() { check_family("flora/"); }
 
 #[test]
 fn figures() { check_family("figures/"); }
+
+#[test]
+fn grow() { check_family("grow/"); }

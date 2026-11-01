@@ -338,10 +338,33 @@ pub fn to_page(x: f64, y: f64) -> (f64, f64) {
 }
 
 // ---------------------------------------------------------------- output
-/// The animation event a tag refers to (Task 5 adds fields).
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum Kind { Stem, #[default] Bloom, Overlay }
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Phase { Stems, Ghost, Branch, Fill, Accent, Tail, Marks, Fall }
+
+/// The animation event a tag refers to: the table grow.lua builds (kind, phase, parent,
+/// the fields its timing reads) and a theme may build with just `t0` and `dur`.
+/// Events are shared and mutated after creation, as the Lua tables are. `t0` is NaN
+/// until the schedule has placed the event (Lua's nil).
+#[derive(Default)]
 pub struct EventData {
     pub t0: f64,
     pub dur: f64,
+    pub kind: Kind,
+    pub phase: Option<Phase>,
+    pub parent: Option<Event>,
+    /// the phase of the root of the parent chain (the Lua's `e.root.phase`)
+    pub root_phase: Option<Phase>,
+    pub i: usize,
+    pub at: Option<f64>,
+    pub size: Option<f64>,
+    pub len: Option<f64>,
+    pub off: Option<f64>,
+    pub span: Option<f64>,
+    pub till_end: bool,
+    pub lead: f64,
 }
 pub type Event = Rc<RefCell<EventData>>;
 
@@ -542,7 +565,8 @@ pub fn normals(pts: &[Pt]) -> Vec<Pt> {
 pub fn arclen(pts: &[Pt]) -> (Vec<f64>, f64) {
     let (mut s, mut acc) = (vec![0.0], 0.0);
     for i in 1..pts.len() {
-        acc = acc + ((pts[i][0] - pts[i - 1][0]).powf(2.0) + (pts[i][1] - pts[i - 1][1]).powf(2.0)).sqrt();
+        let (dx, dy) = (pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+        acc = acc + (dx * dx + dy * dy).sqrt();
         s.push(acc);
     }
     (s, acc)

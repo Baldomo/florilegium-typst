@@ -267,7 +267,8 @@ pub struct Face { pub n: V3, pub v: Vec<usize> }
 pub struct Edge { pub a: usize, pub b: usize, pub f: (usize, Option<usize>) }
 pub struct Hull { pub faces: Vec<Face>, pub edges: Vec<Edge>, pub radius: f64 }
 
-fn sq(x: f64) -> f64 { x.powf(2.0) }
+/// Lua 5.4's `x ^ 2` is `x * x` (luai_numpow), not pow()
+fn sq(x: f64) -> f64 { x * x }
 
 /// the convex hull of points v around the origin (indices 0-based)
 pub fn hull_of(v: &[V3]) -> Hull {
