@@ -41,6 +41,9 @@ pages (2.6 to 3.1 MB each). Rust's wasm std uses compiler-builtins' libm for `si
 `powf`, `exp`, ...; none of the seeds tried shows a one-ulp difference after the 1-decimal
 rounding of the output, but other seeds could, and any such difference is a libm ulp.
 
-Speed: one A4 page takes 0.2 s natively and about 5.3 s inside Typst (wasmi interprets the
-module), almost all of it the core's string formatting and allocation; `typst compile`
-caches the call, so it is paid once per distinct page.
+Speed: one A4 page takes about 0.1 s natively; the `page` call takes about 1.6 s inside Typst
+(wasmi interprets the module) and a page with its 3 MB SVG drawn about 2.3 s in total.
+`typst compile` caches the call, so it is paid once per distinct page.
+
+The plugin's CBOR interface (functions, fields, units, caps) is documented in the module
+docs of `core/src/plugin.rs`.

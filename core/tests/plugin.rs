@@ -50,4 +50,50 @@ fn plugin_errors() {
     let e = err(initial_cbor(&ini("\u{4e2d}")));
     assert!(e.starts_with("florilegium: "), "{e}");
     assert!(initial_cbor(&ini("A")).is_ok());
+
+    // malformed input
+    for f in [page_cbor, ornament_cbor, draw_cbor, initial_cbor] {
+        let e = err(f(&[0xff, 0xff, 0xff]));
+        assert!(e.starts_with("florilegium: ") && e.contains("decode"), "{e}");
+        let e = err(f(&enc(&Value::Array(vec![i(1)]))));
+        assert!(e.contains("must be a dictionary"), "{e}");
+    }
+    let e = err(page_cbor(&page("mode", t("sideways"))));
+    assert!(e.contains("mode is"), "{e}");
+    let e = err(draw_cbor(&enc(&with(dec(&dr("flower")), "opts", map(vec![("petalz", i(5))])))));
+    assert!(e.contains("unknown option 'petalz'"), "{e}");
+
+    // caps
+    let opt = |k: &str, v| enc(&with(dec(&dr("sprig")), "opts", map(vec![(k, v)])));
+    for (k, v) in [("depth", i(50)), ("depth", i(-1)), ("petals", i(100000)), ("lobes", i(101)), ("streaks", f(1e6))] {
+        let e = err(draw_cbor(&opt(k, v)));
+        assert!(e.starts_with("florilegium: ") && e.contains(k), "{e}");
+    }
+    assert!(draw_cbor(&opt("depth", i(8))).is_ok());
+    let hil = enc(&map(vec![("name", t("hilbert")), ("size", f(2.0)), ("seed", i(1)), ("theme", t("math")),
+        ("opts", map(vec![("p", Value::Array(vec![i(1), i(30)]))]))]));
+    let e = err(draw_cbor(&hil));
+    assert!(e.contains("p[1]"), "{e}");
+    let e = err(draw_cbor(&enc(&with(dec(&dr("flower")), "size", f(51.0)))));
+    assert!(e.contains("at most 50"), "{e}");
+    let e = err(ornament_cbor(&enc(&with(dec(&orn("flower")), "size", i(100_000_001)))));
+    assert!(e.contains("at most"), "{e}");
+    let e = err(initial_cbor(&enc(&with(dec(&ini("A")), "side", i(1 << 40)))));
+    assert!(e.contains("at most"), "{e}");
+    let mut d = match get(&page_args(1), "dimens") { Value::Map(m) => m.clone(), _ => unreachable!() };
+    for (k, v) in d.iter_mut() { if k.as_text() == Some("paperwidth") { *v = i(1 << 29) } }
+    let e = err(page_cbor(&page("dimens", Value::Map(d))));
+    assert!(e.contains("150 cm"), "{e}");
+    let e = err(page_cbor(&page("marks", Value::Array(vec![map(vec![("kind", t("heading")), ("arg", i(1)), ("y", f(1.0))]); 1001]))));
+    assert!(e.contains("too many marks"), "{e}");
+}
+
+#[test]
+fn draw_with_lift_takes_the_ghost_path() {
+    let base = || map(vec![("name", t("flower")), ("size", f(1.0)), ("seed", i(3)), ("opts", map(vec![]))]);
+    let plain = dec(&draw_cbor(&enc(&base())).unwrap());
+    let lifted = dec(&draw_cbor(&enc(&with(base(), "opts", map(vec![("lift", f(0.6))])))).unwrap());
+    assert_ne!(get(&plain, "svg"), get(&lifted, "svg"));
+    let w = get(&lifted, "width").as_float().unwrap();
+    assert!(w > 0.0 && get(&lifted, "dx").as_float().unwrap() > 0.0);
 }

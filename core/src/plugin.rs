@@ -3,8 +3,56 @@
 //! and returning one. The functions here are plain Rust over bytes (so tests run them
 //! natively); the `#[wasm_func]` exports at the bottom exist only with the `plugin` feature.
 //!
+//! # Contract (what `src/core.typ` sends and reads)
 //! Absent keys and CBOR `null` (Typst's `none`) mean the same. Numbers may be CBOR integers
-//! or floats. Every failure is an `Err` starting with "florilegium: ".
+//! or floats (all finite, |x| <= 1e12 unless said otherwise). Every failure is an `Err`
+//! starting with "florilegium: ". Colors are hex `RRGGBB` (a leading `#` is accepted); `""`
+//! or absent means the default. The seeds of `draw`, `ornament` and `initial` are any
+//! integer (0 and negatives included; the arithmetic wraps). The document seed of `page`
+//! is checked by the core as in the Lua: when given it must be >= 1.
+//!
+//! ## `page`
+//! In: `page` int 1..=1e6; `twoside` bool (false); `dimens` map of integers in sp, all
+//! required: paperwidth, paperheight, textwidth, textheight, oddsidemargin, evensidemargin,
+//! topmargin, headheight, headsep, footskip, hoffset (|v| <= 2^30; paper sizes 1..=280e6 sp,
+//! about 150 cm; text sizes > 0); `seed` int? (>= 1); `mode` "grown" (default) | "authored";
+//! `theme` str?; `age` num? (0 spring, 0.5 summer, 1 autumn); `marks` array (<= 1000) of
+//! `{kind: "heading"|"bloom", arg: int level | str motif ("" none), y: num}` with y in cm from
+//! the page's lower-left corner; `density` num (1); `intensity` num (1); `visitors` bool
+//! (true); `ink`, `accent` hex (defaults 2456C4, B4662F); `spilly` num? (cm, from the lower
+//! left); `frame` `{k, n, explain}` with 1 <= k <= n <= 1e6; `nohead` bool; `background` hex?.
+//! An unknown non-empty bloom motif is an error in grown mode.
+//! Out: `{svg: bytes, captions: [{x, y, anchor, size, rotate, color, opacity, markup}],
+//! mirror: bool, stats: str}`. The SVG is the whole page in bp (1 bp = 1 pt) with its
+//! origin at the page's top-left. In captions, `x`, `y` are in pt from the page's top-left
+//! corner, `size` in pt, `rotate` in degrees counterclockwise, `color` "#rrggbb",
+//! `opacity` 0..1, `anchor` a TikZ anchor name, `markup` Typst markup.
+//!
+//! ## `ornament`
+//! In: `name` str; `size` int sp (1..=1e8, about 53 cm); `angle` num degrees (0); `count`
+//! int >= 1 (1; the k-th ornament of a document always looks the same); `seed` int?
+//! (overrides `count`); `ink`, `accent`; `theme` str?.
+//!
+//! ## `draw`
+//! In: `name` str; `size` num in cm (0 < size <= 50); `seed` int (required); `opts` map
+//! (below); `ink`, `accent`; `theme` str?. With `opts.lift` present the primitive is drawn
+//! pale through the ghost path. `opts` keys: tone w bend side open facing tilt drift lift
+//! style k (|v| <= 1000); depth (0..=8), petals lobes streaks (0..=100); trail fork star
+//! rays heart (bool); shape (str); eye color (hex); p v (arrays of <= 256 numbers,
+//! |v| <= 1000; for `koch` and `hilbert` p[1] is 0..=7). Unknown keys are errors.
+//!
+//! ## `initial`
+//! In: `letter` str; `side` int sp (1..=1e8); `font` bytes (an OpenType/TrueType file);
+//! `seed` int; `hang` int sp (0), `cap` int sp (default `side`), both |v| <= 2^30. The tile's
+//! left edge is `hang` left of the current point, its top `cap` above the baseline.
+//!
+//! ## Canvas (out of `ornament`, `draw`, `initial`)
+//! `{svg: bytes, width, height, dx, dy}`, all lengths in pt (= bp). The canvas is the box of
+//! every coordinate of every path (control points included), padded by
+//! max(2 bp, widest stroke / 2 + 1 bp) and snapped outward to whole bp. `dx`, `dy` are the
+//! position of the drawing's origin (the ornament's baseline-left, `draw`'s origin, the
+//! initial's current point) from the canvas's top-left corner: place the image at
+//! `(x - dx, y_top - dy)`. An empty drawing gives a 0 x 0 canvas, not an error.
 use crate::flora::Opts;
 use crate::glue::{self, Dimens, Frame, Mode, PageArgs};
 use crate::grow::{Mark, MarkKind};
@@ -13,6 +61,18 @@ use crate::{fmt, initial, svg};
 use ciborium::Value;
 
 type R<T> = Result<T, String>;
+
+/// Caps that keep the work bounded (an `Err`, not a hang or a trap, beyond them); generous
+/// enough that no sensible document reaches them.
+const MAX_DIMEN_SP: i64 = 1 << 30; // TeX's own maximum, about 5.7 m
+const MAX_PAPER_SP: i64 = 280_000_000; // about 150 cm; the free-space lattice grows with the paper
+const MAX_BOX_SP: i64 = 100_000_000; // an ornament or initial: about 53 cm
+const MAX_DRAW_CM: f64 = 50.0;
+const MAX_MARKS: usize = 1000;
+const MAX_OPT: f64 = 1000.0; // any other number of opts, p and v
+const MAX_COUNT_OPT: f64 = 100.0; // petals, lobes, streaks
+const MAX_DEPTH_OPT: f64 = 8.0; // depth: sprig recurses exponentially
+const MAX_LEVEL_OPT: f64 = 7.0; // koch levels, hilbert order (p[1])
 
 fn bad<T>(msg: impl AsRef<str>) -> R<T> { Err(format!("florilegium: {}", msg.as_ref())) }
 
@@ -90,7 +150,7 @@ fn opt_dimens(a: &Args, k: &str) -> R<Dimens> {
     let m = as_map(a.req(k)?, k)?;
     let sp = |n: &str| -> R<i64> {
         let v = m.int_req(n)?;
-        if v.abs() > 1 << 40 { return bad(format!("dimens.{n} is out of range")) }
+        if v.abs() > MAX_DIMEN_SP { return bad(format!("dimens.{n} is out of range (at most 2^30 sp)")) }
         Ok(v)
     };
     let d = Dimens {
@@ -100,6 +160,7 @@ fn opt_dimens(a: &Args, k: &str) -> R<Dimens> {
         hoffset: sp("hoffset")?,
     };
     if d.paperwidth <= 0 || d.paperheight <= 0 { return bad("the paper has no size") }
+    if d.paperwidth > MAX_PAPER_SP || d.paperheight > MAX_PAPER_SP { return bad("the paper is larger than 150 cm") }
     if d.textwidth <= 0 || d.textheight <= 0 { return bad("the margins leave no room for the text") }
     Ok(d)
 }
@@ -120,6 +181,7 @@ fn page_args(a: &Args) -> R<PageArgs> {
     p.season = a.num("age")?;
     if let Some(v) = a.get("marks") {
         let Value::Array(items) = v else { return bad("'marks' must be an array") };
+        if items.len() > MAX_MARKS { return bad("too many marks") }
         for it in items {
             let m = as_map(it, "a mark")?;
             let y = m.num_req("y")?;
@@ -173,13 +235,18 @@ fn opts(v: Option<&Value>) -> R<Opts> {
             "tilt", "streaks", "star", "shape", "rays", "petals", "lobes", "heart", "drift", "lift", "style", "k", "p", "v"];
         if !KNOWN.contains(&k) { return bad(format!("unknown option '{k}'")) }
     }
-    let n = |k: &str| a.f64_in(k, 1e4);
+    let n = |k: &str| a.f64_in(k, MAX_OPT);
+    let capped = |k: &str, hi: f64| -> R<Option<f64>> {
+        let x = a.f64_in(k, MAX_OPT)?;
+        if let Some(x) = x { if x < 0.0 || x > hi { return bad(format!("'{k}' must be between 0 and {hi}")) } }
+        Ok(x)
+    };
     let list = |k: &str| -> R<Option<Vec<f64>>> {
         match a.get(k) {
             None => Ok(None),
             Some(Value::Array(xs)) => {
                 if xs.len() > 256 { return bad(format!("'{k}' has too many values")) }
-                xs.iter().map(|x| number(x, k, 1e4)).collect::<R<Vec<_>>>().map(Some)
+                xs.iter().map(|x| number(x, k, MAX_OPT)).collect::<R<Vec<_>>>().map(Some)
             }
             Some(_) => bad(format!("'{k}' must be an array of numbers")),
         }
@@ -187,8 +254,8 @@ fn opts(v: Option<&Value>) -> R<Opts> {
     Ok(Opts {
         tone: n("tone")?, w: n("w")?, eye: color(&a, "eye")?, color: color(&a, "color")?, bend: n("bend")?,
         trail: a.flag("trail")?, side: n("side")?, open: n("open")?, fork: a.flag("fork")?, facing: n("facing")?,
-        depth: n("depth")?, tilt: n("tilt")?, streaks: n("streaks")?, star: a.flag("star")?,
-        shape: a.text("shape")?.map(str::to_string), rays: a.flag("rays")?, petals: n("petals")?, lobes: n("lobes")?,
+        depth: capped("depth", MAX_DEPTH_OPT)?, tilt: n("tilt")?, streaks: capped("streaks", MAX_COUNT_OPT)?, star: a.flag("star")?,
+        shape: a.text("shape")?.map(str::to_string), rays: a.flag("rays")?, petals: capped("petals", MAX_COUNT_OPT)?, lobes: capped("lobes", MAX_COUNT_OPT)?,
         heart: a.flag("heart")?, drift: n("drift")?, lift: n("lift")?, style: n("style")?, k: n("k")?,
         p: list("p")?, v: list("v")?,
     })
@@ -215,9 +282,11 @@ fn canvas(streams: &[String]) -> R<Canvas> {
     let joined = streams.join("\n");
     let (mut x0, mut y0, mut x1, mut y1) = (f64::INFINITY, f64::INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY);
     let mut nums: Vec<f64> = vec![];
+    let mut wmax = 0f64;
     for t in joined.split_ascii_whitespace() {
         let c = t.as_bytes()[0];
         if c.is_ascii_alphabetic() {
+            if t == "w" { if let Some(w) = nums.last() { wmax = wmax.max(*w) } }
             let take = match t { "m" | "l" => 2, "c" => 6, _ => 0 };
             if take > 0 && nums.len() >= take {
                 for p in nums[nums.len() - take..].chunks(2) {
@@ -226,13 +295,15 @@ fn canvas(streams: &[String]) -> R<Canvas> {
             }
             nums.clear();
         } else if let Ok(x) = t.parse::<f64>() {
+            if !x.is_finite() { return bad("a drawing has a non-finite coordinate") }
             nums.push(x);
         }
     }
     if !x0.is_finite() || !y0.is_finite() {
         return Ok(Canvas { svg: "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"0\" height=\"0\"/>\n".into(), width: 0.0, height: 0.0, dx: 0.0, dy: 0.0 });
     }
-    let pad = 2.0;
+    if !(x1.is_finite() && y1.is_finite() && wmax.is_finite()) { return bad("a drawing has a non-finite extent") }
+    let pad = f64::max(2.0, wmax / 2.0 + 1.0);
     let (l, r, top, bottom) = ((x0 - pad).floor(), (x1 + pad).ceil(), (y1 + pad).ceil(), (y0 - pad).floor());
     let (w, h) = (r - l, top - bottom);
     let mut parts = vec![];
@@ -299,7 +370,7 @@ pub fn ornament_cbor(bytes: &[u8]) -> R<Vec<u8>> {
     let a = as_map(&v, "the arguments")?;
     let name = a.text_req("name")?;
     let size = a.int_req("size")?;
-    if size <= 0 || size > 1 << 36 { return bad("the ornament's size must be positive (sp)") }
+    if size <= 0 || size > MAX_BOX_SP { return bad("the ornament's size must be positive and at most 100000000 sp") }
     let angle = a.f64_in("angle", 1e6)?.unwrap_or(0.0);
     let count = a.int("count")?.unwrap_or(1);
     if count < 1 { return bad("the ornament count starts at 1") }
@@ -313,8 +384,13 @@ pub fn draw_cbor(bytes: &[u8]) -> R<Vec<u8>> {
     let a = as_map(&v, "the arguments")?;
     let name = a.text_req("name")?;
     let size = a.num_req("size")?;
-    if size <= 0.0 || size > 1e3 { return bad("the size must be positive (cm) and at most 1000") }
+    if size <= 0.0 || size > MAX_DRAW_CM { return bad("the size must be positive (cm) and at most 50") }
     let o = opts(a.get("opts"))?;
+    if matches!(name, "koch" | "hilbert") {
+        if let Some(l) = o.p.as_ref().and_then(|p| p.get(1)) {
+            if *l < 0.0 || *l > MAX_LEVEL_OPT { return bad(format!("{name}: p[1] must be between 0 and 7")) }
+        }
+    }
     let (ink, acc) = ink_accent(&a)?;
     let seed = a.int_req("seed")?;
     let theme = a.text("theme")?;
@@ -328,9 +404,9 @@ pub fn initial_cbor(bytes: &[u8]) -> R<Vec<u8>> {
     let a = as_map(&v, "the arguments")?;
     let letter = a.text_req("letter")?;
     let side = a.int_req("side")?;
-    if side <= 0 || side > 1 << 36 { return bad("the initial's side must be positive (sp)") }
+    if side <= 0 || side > MAX_BOX_SP { return bad("the initial's side must be positive and at most 100000000 sp") }
     let (hang, cap) = (a.int("hang")?.unwrap_or(0), a.int("cap")?.unwrap_or(side));
-    if hang.abs() > 1 << 36 || cap.abs() > 1 << 36 { return bad("hang or cap out of range") }
+    if hang.abs() > MAX_DIMEN_SP || cap.abs() > MAX_DIMEN_SP { return bad("hang or cap out of range") }
     let font = match a.req("font")? { Value::Bytes(b) => b, _ => return bad("'font' must be bytes") };
     let shapes = initial::shapes_from_font(font).map_err(|e| format!("florilegium: {e}"))?;
     let s = glue::initial_streams(letter, side, hang, cap, &shapes, a.int_req("seed")?)?;
@@ -352,4 +428,23 @@ mod exports {
     pub fn draw(args: &[u8]) -> Result<Vec<u8>, String> { super::draw_cbor(args) }
     #[wasm_func]
     pub fn initial(args: &[u8]) -> Result<Vec<u8>, String> { super::initial_cbor(args) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn empty_drawing_is_a_zero_canvas() {
+        let c = canvas(&[]).unwrap();
+        assert_eq!((c.width, c.height, c.dx, c.dy), (0.0, 0.0, 0.0, 0.0));
+        assert!(c.svg.contains("width=\"0\""));
+    }
+
+    #[test]
+    fn canvas_pads_by_the_stroke_and_rejects_non_finite() {
+        let c = canvas(&["q 10 w 0 0 m 10 0 l S Q".to_string()]).unwrap();
+        assert_eq!((c.dx, c.dy), (6.0, 6.0));
+        assert!(canvas(&["-1e999 0 m".to_string()]).is_err());
+    }
 }

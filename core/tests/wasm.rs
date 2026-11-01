@@ -1,8 +1,9 @@
 // Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
 //! Runs the built plugin (`make wasm`) in wasmi and compares its `page` with the native one.
 mod common;
+use ciborium::Value;
 use common::*;
-use florilegium_core::plugin::page_cbor;
+use florilegium_core::plugin::{draw_cbor, initial_cbor, ornament_cbor, page_cbor};
 use wasmi::{Caller, Engine, Linker, Memory, Module, Store};
 
 #[derive(Default)]
@@ -36,14 +37,20 @@ fn svg_of(b: &[u8]) -> Vec<u8> {
     match get(&dec(b), "svg") { ciborium::Value::Bytes(s) => s.clone(), _ => panic!("svg is not bytes") }
 }
 
+fn load() -> Option<Vec<u8>> {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/florilegium.wasm");
+    let w = std::fs::read(path).ok();
+    if w.is_none() { println!("src/florilegium.wasm is missing (run `make wasm`): wasm parity skipped") }
+    w
+}
+
 #[test]
 fn wasm_parity() {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/florilegium.wasm");
-    let Ok(wasm) = std::fs::read(path) else {
-        println!("src/florilegium.wasm is missing (run `make wasm`): wasm parity skipped");
-        return;
-    };
-    if let Ok(dir) = std::env::var("FLO_DUMP") { std::fs::write(format!("{dir}/args.cbor"), enc(&page_args(1))).unwrap(); std::fs::write(format!("{dir}/args7.cbor"), enc(&page_args(7))).unwrap() }
+    let Some(wasm) = load() else { return };
+    if let Ok(dir) = std::env::var("FLO_DUMP") {
+        std::fs::write(format!("{dir}/args.cbor"), enc(&page_args(1))).unwrap();
+        std::fs::write(format!("{dir}/args7.cbor"), enc(&page_args(7))).unwrap();
+    }
     let mut total = 0;
     for seed in 1..=8 {
         let args = enc(&page_args(seed));
@@ -54,7 +61,40 @@ fn wasm_parity() {
         total += diff;
     }
     println!("total differing bytes: {total}");
+    assert_eq!(total, 0, "the wasm page differs from the native one");
+}
 
+/// the whole result (captions, mirror, stats, canvases) of each function equals the native one
+#[test]
+fn wasm_matches_native_everywhere() {
+    let Some(wasm) = load() else { return };
+    let font = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../fonts/lmroman10-bold.otf")).unwrap();
+    let cases: Vec<(&str, Value, fn(&[u8]) -> Result<Vec<u8>, String>)> = vec![
+        ("page", with(page_args(2), "theme", t("math")), page_cbor),
+        ("page", with(with(page_args(3), "twoside", Value::Bool(true)), "page", i(2)), page_cbor),
+        ("ornament", map(vec![("name", t("flower")), ("size", i(655360)), ("angle", f(10.0)), ("count", i(2))]), ornament_cbor),
+        ("draw", map(vec![("name", t("leaf")), ("size", f(1.5)), ("seed", i(4)), ("opts", map(vec![("depth", f(0.5))]))]), draw_cbor),
+        ("draw", map(vec![("name", t("flower")), ("size", f(1.0)), ("seed", i(4)), ("opts", map(vec![("lift", f(0.5))]))]), draw_cbor),
+        ("initial", map(vec![("letter", t("A")), ("side", i(1310720)), ("font", Value::Bytes(font.clone())), ("seed", i(5))]), initial_cbor),
+    ];
+    for (name, args, native) in cases {
+        let a = enc(&args);
+        let n = native(&a).unwrap();
+        let w = call(&wasm, name, &a).unwrap();
+        assert_eq!(dec(&n), dec(&w), "{name}: wasm and native results differ");
+    }
+    // the captions were really compared: the math page has some
+    let caps = get(&dec(&page_cbor(&enc(&with(page_args(2), "theme", t("math")))).unwrap()), "captions").clone();
+    assert!(matches!(&caps, Value::Array(c) if !c.is_empty()), "no captions to compare");
+
+    // the error paths through wasm
     let e = call(&wasm, "page", &enc(&with(page_args(1), "theme", t("nope")))).unwrap_err();
     assert!(e.contains("no theme 'nope'"), "{e}");
+    let e = call(&wasm, "ornament", &enc(&map(vec![("name", t("nope")), ("size", i(655360))]))).unwrap_err();
+    assert!(e.contains("no primitive 'nope'"), "{e}");
+    let e = call(&wasm, "initial", &enc(&map(vec![("letter", t("\u{4e2d}")), ("side", i(655360)),
+        ("font", Value::Bytes(font)), ("seed", i(1))]))).unwrap_err();
+    assert!(e.starts_with("florilegium: "), "{e}");
+    let e = call(&wasm, "draw", &[0xff]).unwrap_err();
+    assert!(e.contains("decode"), "{e}");
 }
