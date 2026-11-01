@@ -85,3 +85,6 @@ fn authored() { check_family("authored/"); }
 
 #[test]
 fn geometric() { check_family("geometric/"); }
+
+#[test]
+fn math() { check_family("math/"); }

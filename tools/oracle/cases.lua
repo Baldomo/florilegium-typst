@@ -712,6 +712,8 @@ local GROW_CASES = {
   { name = "density-1", density = 1 },
   { name = "age-0.5", age = 0.5 },
   { name = "mirror", mirror = true, marks = GROW_MARKS },
+  { name = "math-marks", age = 0.95, themeonly = true, marks = { { kind = "heading", arg = 1, y = 20 }, { kind = "heading", arg = 2, y = 14 },
+    { kind = "bloom", arg = "", y = 9 }, { kind = "bloom", arg = "knot", y = 11 }, { kind = "bloom", arg = "umbel", y = 6 } } },
 }
 local GROW_SEEDS = { 1, 2, 3, 6, 7 }
 -- the grown garden in a theme: prefix, seed, spill, case
@@ -730,17 +732,44 @@ GROW_THEME_CASES[#GROW_THEME_CASES + 1] = { "grow/anim", 2, 1, "autumn-marks" }
 GROW_THEME_CASES[#GROW_THEME_CASES + 1] = { "grow/anim", 3, 0, "density-0.4" }
 GROW_THEME_CASES[#GROW_THEME_CASES + 1] = { "grow/anim", 1, 0, "mirror" }
 
+local GROW_MATH_CASES = {}
+for _, name in ipairs({ "summer", "math-marks", "density-0.4" }) do
+  for _, seed in ipairs(GROW_SEEDS) do
+    for spill = 0, 1 do GROW_MATH_CASES[#GROW_MATH_CASES + 1] = { "grow", seed, spill, name } end
+  end
+end
+for _, c in ipairs({ { 1, 0, "mirror" }, { 2, 1, "mirror" }, { 3, 1, "mirror" }, { 1, 1, "density-0.05" }, { 2, 0, "age-0.5" } }) do
+  GROW_MATH_CASES[#GROW_MATH_CASES + 1] = { "grow", c[1], c[2], c[3] }
+end
+for _, c in ipairs({ { 1, 0, "summer" }, { 2, 1, "math-marks" }, { 3, 0, "density-0.4" }, { 1, 0, "mirror" } }) do
+  GROW_MATH_CASES[#GROW_MATH_CASES + 1] = { "grow/anim", c[1], c[2], c[3] }
+end
+
+-- the captions a composition returns, one per line, as the Rust side prints them
+local function caption_lines(out, caps)
+  local function f(v) return v == nil and "nil" or sfmt("%.6f", v) end
+  for _, c in ipairs(caps) do
+    local col = c.color and (f(c.color[1]) .. "," .. f(c.color[2]) .. "," .. f(c.color[3])) or "nil"
+    out[#out + 1] = table.concat({ f(c.x), f(c.y), tostring(c.anchor), c.small and "true" or "nil", f(c.scale), f(c.rotate), col, f(c.opacity), c.text }, " ")
+  end
+end
+
 M.register("grow", function()
   local ids = {}
   for _, prefix in ipairs({ "grow", "grow/anim" }) do
     for _, seed in ipairs(GROW_SEEDS) do
       for spill = 0, 1 do
-        for _, c in ipairs(GROW_CASES) do ids[#ids + 1] = ("%s/seed=%d/spill=%d/case=%s"):format(prefix, seed, spill, c.name) end
+        for _, c in ipairs(GROW_CASES) do
+          if not c.themeonly then ids[#ids + 1] = ("%s/seed=%d/spill=%d/case=%s"):format(prefix, seed, spill, c.name) end
+        end
       end
     end
   end
   for _, spec in ipairs(GROW_THEME_CASES) do
     ids[#ids + 1] = ("%s/seed=%d/spill=%d/case=%s/theme=geometric"):format(spec[1], spec[2], spec[3], spec[4])
+  end
+  for _, spec in ipairs(GROW_MATH_CASES) do
+    ids[#ids + 1] = ("%s/seed=%d/spill=%d/case=%s/theme=math"):format(spec[1], spec[2], spec[3], spec[4])
   end
   return ids
 end, function(id)
@@ -760,6 +789,11 @@ end, function(id)
   g.age, g.marks, g.visitors, g.density, g.mirror = case.age, case.marks, case.visitors, case.density, case.mirror
   g.theme = theme
   local out = {}
+  if not anim and theme == "math" then
+    local r = grow.page(g)
+    caption_lines(out, r.captions)
+    return finish(out)
+  end
   if not anim then
     local r = grow.page(g)
     out[#out + 1] = ("motifs %d stems %d cells %d"):format(r.stats.motifs, r.stats.stems, r.stats.cells)
@@ -786,6 +820,10 @@ end, function(id)
   out[#out + 1] = "total " .. G(r.total)
   out[#out + 1] = "events " .. #events
   for _, e in ipairs(events) do out[#out + 1] = G(e.t0) .. " " .. G(e.dur) end
+  if r.captions then
+    caption_lines(out, r.captions)
+    for _, c in ipairs(r.captions) do out[#out + 1] = G(c.event.t0) .. " " .. G(c.event.dur) end
+  end
   return finish(out)
 end)
 
@@ -802,6 +840,8 @@ M.register("authored", function()
   for _, c in ipairs(AUTH_CASES) do ids[#ids + 1] = ("authored/seed=%d/case=%s"):format(c.seed, c.name) end
   for s = 1, 4 do ids[#ids + 1] = ("authored/seed=%d/case=plain/theme=geometric"):format(s) end
   ids[#ids + 1] = "authored/seed=1/case=mirror/theme=geometric"
+  for s = 1, 2 do ids[#ids + 1] = ("authored/seed=%d/case=plain/theme=math"):format(s) end
+  ids[#ids + 1] = "authored/seed=1/case=mirror/theme=math"
   return ids
 end, function(id)
   local seed, name, theme = id:match("^authored/seed=(%d+)/case=([^/]+)/theme=(.+)$")
@@ -813,8 +853,102 @@ end, function(id)
   g.colright, g.headrule, g.footy = g.textleft - 0.4, g.ytop + 0.7, 1.9
   g.seed, g.visitors, g.mirror = case.seed, case.visitors, case.mirror
   g.theme = theme
-  authored.page(g)
-  return finish({})
+  local r = authored.page(g)
+  local out = {}
+  if r and r.captions then caption_lines(out, r.captions) end
+  return finish(out)
+end)
+
+-- ---------------------------------------------------------------- math
+-- theme-math.lua: its page composition's captions, and its flora table by name
+local maththeme = require("theme-math")
+local MATH_R = { "0.5", "1.2" }
+local MATH_FAM_ONLY = {}
+do
+  local isfig = {}
+  for _, n in ipairs(figs.figure_order) do isfig[n] = true end
+  for _, n in ipairs(figs.family_order) do if not isfig[n] then MATH_FAM_ONLY[#MATH_FAM_ONLY + 1] = n end end
+end
+local function csv(t)
+  if type(t) == "number" then t = { t } end
+  local o = {}
+  for i, v in ipairs(t) do o[i] = v == true and "true" or v == false and "false" or sfmt("%.17g", v) end
+  return table.concat(o, ",")
+end
+local function uncsv(s)
+  local t = {}
+  for v in s:gmatch("[^,]+") do t[#t + 1] = v == "true" or (v ~= "false" and tonumber(v)) end
+  return t
+end
+
+M.register("math", function()
+  local ids = {}
+  local function add(id) ids[#ids + 1] = id end
+  for _, case in ipairs({ { 1, 0, "summer" }, { 2, 1, "summer" }, { 3, 1, "math-marks" }, { 1, 1, "mirror" }, { 2, 0, "density-0.4" },
+      { 3, 0, "density-0.05" }, { 4, 1, "density-0.15" } }) do
+    add(("math/captions/seed=%d/spill=%d/case=%s"):format(case[1], case[2], case[3]))
+  end
+  for _, name in ipairs(figs.figure_order) do
+    for _, R in ipairs(MATH_R) do
+      for k = 1, 3 do add(("math/%s/R=%s/seed=%d"):format(name, R, k)) end
+    end
+    for k = 1, 3 do
+      add(("math/%s/R=1.2/seed=%d/p=%s"):format(name, k, csv(FIGS[name].pick(ink.rng(50 + k)))))
+    end
+  end
+  for _, name in ipairs(MATH_FAM_ONLY) do
+    for _, R in ipairs(MATH_R) do
+      for k = 1, 3 do add(("math/%s/R=%s/seed=%d"):format(name, R, k)) end
+    end
+    for i, v in ipairs(FAMS[name].values) do
+      add(("math/%s/R=1.2/seed=%d/vi=%d"):format(name, 1 + i % 3, i))
+      add(("math/%s/R=0.5/seed=%d/vi=%d/p=%s"):format(name, 1 + i % 3, i, csv(FAMS[name].pick(ink.rng(60 + i)))))
+    end
+  end
+  add("math/rose/R=1.2/seed=1/v=9,4")
+  add("math/archimedes/R=1.2/seed=2/v=5")
+  for _, R in ipairs(MATH_R) do
+    for k = 1, 2 do add(("math/hedera/R=%s/seed=%d"):format(R, k)) end
+    add(("math/hedera/R=%s/seed=1/color=0.2,0.5,0.3"):format(R))
+  end
+  return ids
+end, function(id)
+  local name, rest = id:match("^math/([^/]+)/(.*)$")
+  local grow = require("grow")
+  if name == "captions" then
+    local seed, spill, case = rest:match("^seed=(%d+)/spill=(%d)/case=(.+)$")
+    local g = { pw = 21, ph = 29.7, textleft = 6.8, textright = 18.8, ytop = 25.4, ybot = 3.0 }
+    g.colright, g.headrule, g.footy = g.textleft - 0.4, g.ytop + 0.7, 1.9
+    g.seed, g.spill = tonumber(seed), tonumber(spill)
+    g.spilly = g.spill == 1 and 19.0 or 0
+    local want
+    for _, c in ipairs(GROW_CASES) do if c.name == case then want = c end end
+    if case == "density-0.15" then want = { density = 0.15 } end
+    if not want then error("bad math id: " .. id) end
+    g.age, g.marks, g.density, g.mirror = want.age, want.marks, want.density, want.mirror
+    local r = maththeme.page(g, grow)
+    local out = {}
+    caption_lines(out, r.captions)
+    return finish(out)
+  end
+  local out = { id }
+  local kv = {}
+  for key, v in rest:gmatch("([^/=]+)=([^/]*)") do kv[key] = v end
+  ink.set_transform({ ink.CM, 0, 0, ink.CM, 0, 0 })
+  local r = ink.rng(tonumber(kv.seed))
+  local o
+  if kv.p or kv.v or kv.vi or kv.color then
+    o = { p = kv.p and uncsv(kv.p), v = kv.v and uncsv(kv.v), color = kv.color and uncsv(kv.color) }
+    if kv.vi then o.v = FAMS[name].values[tonumber(kv.vi)] end
+    if o.v and kv.v and FAMS[name] and type(FAMS[name].values[1]) == "number" then o.v = o.v[1] end
+  end
+  local fn = maththeme.flora[name]
+  if not fn then error("bad math id: " .. id) end
+  local x, y = fn(r, tonumber(kv.R), o)
+  if x then nums(out, x, y) end
+  nums(out, r.u())
+  ink.flush()
+  return finish(out)
 end)
 
 return M

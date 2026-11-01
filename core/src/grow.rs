@@ -338,6 +338,7 @@ pub struct ThemeDef {
 fn theme_def(name: &str) -> Option<ThemeDef> {
     match name {
         "geometric" => Some(crate::geometric::theme_def()),
+        "math" => Some(crate::math::theme_def()),
         _ => None,
     }
 }

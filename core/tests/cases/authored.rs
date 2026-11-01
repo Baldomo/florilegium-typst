@@ -21,8 +21,11 @@ pub fn run(id: &str) -> Result<String, String> {
         "mirror" => g.mirror = true,
         _ => return Err(bad()),
     }
-    authored::page(&g)?;
-    let mut s = String::from("\n=====\n");
+    let r = authored::page(&g)?;
+    let mut out = vec![];
+    super::math::caption_lines(&mut out, &r.captions);
+    let mut s = out.join("\n");
+    s.push_str("\n=====\n");
     s.push_str(&ink::take_output().join("\n=====\n"));
     Ok(s)
 }

@@ -14,7 +14,7 @@ fn marks() -> Vec<Mark> {
     ]
 }
 
-fn geometry(seed: f64, spill: i32, case: &str) -> Result<G, String> {
+pub fn geometry(seed: f64, spill: i32, case: &str) -> Result<G, String> {
     let mut g = G { pw: 21.0, ph: 29.7, textleft: 6.8, textright: 18.8, ytop: 25.4, ybot: 3.0, ..Default::default() };
     g.colright = g.textleft - 0.4;
     g.headrule = g.ytop + 0.7;
@@ -32,6 +32,16 @@ fn geometry(seed: f64, spill: i32, case: &str) -> Result<G, String> {
         "density-1" => g.density = Some(1.0),
         "age-0.5" => g.age = Some(0.5),
         "mirror" => { g.mirror = true; g.marks = marks() }
+        "math-marks" => {
+            g.age = Some(0.95);
+            g.marks = vec![
+                Mark { kind: MarkKind::Heading(1), y: 20.0 },
+                Mark { kind: MarkKind::Heading(2), y: 14.0 },
+                Mark { kind: MarkKind::Bloom(String::new()), y: 9.0 },
+                Mark { kind: MarkKind::Bloom("knot".into()), y: 11.0 },
+                Mark { kind: MarkKind::Bloom("umbel".into()), y: 6.0 },
+            ];
+        }
         _ => return Err(format!("bad grow case {case:?}")),
     }
     Ok(g)
@@ -67,6 +77,11 @@ pub fn run(id: &str) -> Result<String, String> {
     let mut g = geometry(seed, spill, case)?;
     if let Some(t) = p.get(3) { g.theme = Some(t.strip_prefix("theme=").ok_or_else(bad)?.to_string()) }
     let mut out = vec![];
+    if !anim && g.theme.as_deref() == Some("math") {
+        let r = grow::page(&g)?;
+        super::math::caption_lines(&mut out, &r.captions);
+        return Ok(finish(out));
+    }
     if !anim {
         let r = grow::page(&g)?;
         let st = r.stats.ok_or("no stats")?;
@@ -92,6 +107,15 @@ pub fn run(id: &str) -> Result<String, String> {
     out.push(format!("events {}", events.len()));
     for e in &events {
         let e = e.borrow();
+        let mut s = String::new();
+        fmt::gp(&mut s, e.t0, 17);
+        s.push(' ');
+        fmt::gp(&mut s, e.dur, 17);
+        out.push(s);
+    }
+    super::math::caption_lines(&mut out, &r.captions);
+    for c in &r.captions {
+        let e = c.event.as_ref().ok_or("caption without event")?.borrow();
         let mut s = String::new();
         fmt::gp(&mut s, e.t0, 17);
         s.push(' ');
