@@ -154,18 +154,18 @@ fn with_colors<T>(inkhex: &str, acchex: &str, f: impl FnOnce() -> Result<T, Stri
 /// the origin of the page, in cm); the names of the theme's primitives work too. Returns the
 /// SVG of it. `seed` seeds the rng the primitive's own is forked from (florilegium.lua's
 /// `page_rng.fork()`); "" colors are ink's defaults.
-pub fn draw(name: &str, size: f64, o: &Opts, inkhex: &str, acchex: &str, theme: Option<&str>, seed: i64) -> Result<String, String> {
+pub fn draw_streams(name: &str, size: f64, o: &Opts, inkhex: &str, acchex: &str, theme: Option<&str>, seed: i64) -> Result<Vec<String>, String> {
     entry(|| with_colors(inkhex, acchex, || {
         ink::set_transform([CM, 0.0, 0.0, CM, 0.0, 0.0]);
         let rng = Rng::new(seed as f64).fork();
         grow::draw_named(theme, name, &rng, size, o)?;
         ink::flush();
-        svg::standalone(&ink::take_output())
+        Ok(ink::take_output())
     }))
 }
 
 /// \florilegiumdraw{ghost}{"flower", {s=1.4}}: any primitive drawn pale (`o.lift`)
-pub fn draw_ghost(inner: &str, size: f64, o: &Opts, inkhex: &str, acchex: &str, theme: Option<&str>, seed: i64) -> Result<String, String> {
+pub fn draw_ghost_streams(inner: &str, size: f64, o: &Opts, inkhex: &str, acchex: &str, theme: Option<&str>, seed: i64) -> Result<Vec<String>, String> {
     entry(|| with_colors(inkhex, acchex, || {
         ink::set_transform([CM, 0.0, 0.0, CM, 0.0, 0.0]);
         let rng = Rng::new(seed as f64).fork();
@@ -173,7 +173,7 @@ pub fn draw_ghost(inner: &str, size: f64, o: &Opts, inkhex: &str, acchex: &str, 
         flora::ghost(o.lift, || res = grow::draw_named(theme, inner, &rng, size, o));
         res?;
         ink::flush();
-        svg::standalone(&ink::take_output())
+        Ok(ink::take_output())
     }))
 }
 
@@ -212,8 +212,8 @@ fn placement(name: &str) -> (f64, f64, f64, f64, Opts) {
 /// `size` (sp) on the baseline, like a letter (its depth 0.15 of the size), as an SVG with its
 /// origin at the baseline. The k-th ornament of the document (`count`, from 1) always gets the
 /// same shape, unless a seed is given.
-pub fn ornament(name: &str, size_sp: i64, inkhex: &str, acchex: &str, angle: f64, seed: Option<i64>, count: i64,
-                theme: Option<&str>) -> Result<String, String> {
+pub fn ornament_streams(name: &str, size_sp: i64, inkhex: &str, acchex: &str, angle: f64, seed: Option<i64>, count: i64,
+                theme: Option<&str>) -> Result<Vec<String>, String> {
     entry(|| {
         let s = match seed {
             Some(sd) => sd.wrapping_mul(7919).wrapping_add(17),
@@ -227,7 +227,7 @@ pub fn ornament(name: &str, size_sp: i64, inkhex: &str, acchex: &str, angle: f64
             ink::rotate(p.3 + angle);
             grow::draw_named(theme, name, &Rng::new(s as f64), big_s * p.2, &p.4)?;
             ink::flush();
-            svg::standalone(&ink::take_output())
+            Ok(ink::take_output())
         })
     })
 }
@@ -263,14 +263,14 @@ pub fn head(g: &Geometry, theme: Option<&str>) -> Result<(), String> {
 /// \florilegiuminitial: a tile of side `side_sp` whose top is the cap height above the current
 /// baseline and whose left edge is `hang_sp` to the left of the current point; returns its SVG.
 /// `seed` seeds the page rng the tile's rng is forked from.
-pub fn initial(letter: &str, side_sp: i64, hang_sp: i64, cap_sp: i64, shapes: &Shapes, seed: i64) -> Result<String, String> {
+pub fn initial_streams(letter: &str, side_sp: i64, hang_sp: i64, cap_sp: i64, shapes: &Shapes, seed: i64) -> Result<Vec<String>, String> {
     entry(|| {
         let bp = 72.0 / 72.27 / 65536.0;
         ink::set_transform([CM, 0.0, 0.0, CM, -(hang_sp as f64) * bp, (cap_sp - side_sp) as f64 * bp]);
         let rng = Rng::new(seed as f64).fork();
         initial::draw(&rng, side_sp as f64 * SP_CM, letter, shapes).map_err(|e| format!("florilegium: {e}"))?;
         ink::flush();
-        svg::standalone(&ink::take_output())
+        Ok(ink::take_output())
     })
 }
 
@@ -460,4 +460,22 @@ fn garden_inner(a: &PageArgs) -> Result<Garden, String> {
         stats: stats.as_ref().map(stats_lines).unwrap_or_default(),
         geometry: geo,
     })
+}
+
+// ---------------------------------------------------------------- the same as standalone SVGs
+pub fn draw(name: &str, size: f64, o: &Opts, inkhex: &str, acchex: &str, theme: Option<&str>, seed: i64) -> Result<String, String> {
+    svg::standalone(&draw_streams(name, size, o, inkhex, acchex, theme, seed)?)
+}
+
+pub fn draw_ghost(inner: &str, size: f64, o: &Opts, inkhex: &str, acchex: &str, theme: Option<&str>, seed: i64) -> Result<String, String> {
+    svg::standalone(&draw_ghost_streams(inner, size, o, inkhex, acchex, theme, seed)?)
+}
+
+pub fn ornament(name: &str, size_sp: i64, inkhex: &str, acchex: &str, angle: f64, seed: Option<i64>, count: i64,
+                theme: Option<&str>) -> Result<String, String> {
+    svg::standalone(&ornament_streams(name, size_sp, inkhex, acchex, angle, seed, count, theme)?)
+}
+
+pub fn initial(letter: &str, side_sp: i64, hang_sp: i64, cap_sp: i64, shapes: &Shapes, seed: i64) -> Result<String, String> {
+    svg::standalone(&initial_streams(letter, side_sp, hang_sp, cap_sp, shapes, seed)?)
 }

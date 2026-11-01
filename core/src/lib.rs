@@ -8,6 +8,7 @@ pub mod glue;
 pub mod grow;
 pub mod initial;
 pub mod ink;
+pub mod plugin;
 pub mod math;
 pub mod svg;
 pub mod tex;

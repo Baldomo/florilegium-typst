@@ -31,3 +31,16 @@ Typst's `pt` is TeX's `bp`):
 So a Typst page with the default margins is not byte-identical to `svg.lua`'s page in the
 last digit of some coordinates; use `svg.lua`-style lengths (`Dimens::from_margins` with
 `svg::sp`) where byte equality matters.
+
+### The wasm plugin against the native build
+
+`core/tests/wasm.rs` runs `src/florilegium.wasm` (`make wasm`) in wasmi and compares the
+SVG of `page` for the `svg.lua --seed N` pages, N = 1..8 (default A4 layout), with the
+native result. Measured with rust 1.99.1, native glibc libm: 0 differing bytes in all eight
+pages (2.6 to 3.1 MB each). Rust's wasm std uses compiler-builtins' libm for `sin`, `cos`,
+`powf`, `exp`, ...; none of the seeds tried shows a one-ulp difference after the 1-decimal
+rounding of the output, but other seeds could, and any such difference is a libm ulp.
+
+Speed: one A4 page takes 0.2 s natively and about 5.3 s inside Typst (wasmi interprets the
+module), almost all of it the core's string formatting and allocation; `typst compile`
+caches the call, so it is paid once per distinct page.
