@@ -1,2 +1,5 @@
 .superpowers/
 core/target/
+*.pdf
+tests/**/out/
+tests/**/diff/
