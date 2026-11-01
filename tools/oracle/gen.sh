@@ -15,16 +15,19 @@ export here
 export LUA_CMD="${LUA[*]}"
 
 one() {
-  local id="$1" tmp
+  set -euo pipefail
+  local id="$1"; tmp=""
   tmp="$(mktemp)"
-  $LUA_CMD "$here/case.lua" "$id" > "$tmp"
+  trap 'rm -f "${tmp:-}"' EXIT
+  $LUA_CMD "$here/case.lua" "$id" > "$tmp" || { echo "gen.sh: case failed: $id" >&2; exit 1; }
   printf '%s\t%s\t%s\n' "$id" "$(wc -c < "$tmp" | tr -d ' ')" "$(sha256sum "$tmp" | cut -d' ' -f1)"
-  rm -f "$tmp"
 }
 export -f one
 
 new="$(mktemp)"
-$LUA_CMD "$here/list.lua" "$prefix" | xargs -d '\n' -P "$(nproc)" -I{} bash -c 'one "$1"' _ {} > "$new"
+trap 'rm -f "$new" "$tsv.tmp"' EXIT
+$LUA_CMD "$here/list.lua" "$prefix" | xargs -d '\n' -P "$(nproc)" -I{} bash -c 'one "$1"' _ {} > "$new" \
+  || { echo "gen.sh: some cases failed; $tsv left unchanged" >&2; exit 1; }
 mkdir -p "$(dirname "$tsv")"
 touch "$tsv"
 {
@@ -32,5 +35,4 @@ touch "$tsv"
   cat "$new"
 } | LC_ALL=C sort > "$tsv.tmp"
 mv "$tsv.tmp" "$tsv"
-rm -f "$new"
 echo "oracle.tsv: $(grep -c '' "$tsv") cases ($(grep -c '' <<<"$(cut -f1 "$tsv" | awk -v p="$prefix" 'index($0,p)==1')") with prefix '$prefix')"

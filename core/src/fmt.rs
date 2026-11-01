@@ -11,7 +11,7 @@ pub fn fixed(out: &mut String, x: f64, prec: usize) {
     if prec <= 15 {
         let y = x * 10f64.powi(prec as i32);
         let ay = y.abs();
-        if ay < 4503599627370496.0 && (ay - ay.floor() - 0.5).abs() > 1e-6 {
+        if ay < 1073741824.0 && (ay - ay.floor() - 0.5).abs() > 1e-6 {
             let digits = ay.round() as u64;
             if x.is_sign_negative() {
                 out.push('-');
@@ -102,6 +102,9 @@ mod tests {
         assert_eq!(f(-0.04, 1), "-0.0");
         assert_eq!(f(1e21, 1), "1000000000000000000000.0");
         assert_eq!(f(2.675, 2), "2.67");
+        assert_eq!(f(123456789.04999999, 1), "123456789.0");
+        assert_eq!(f(9007199254.04999, 1), "9007199254.0");
+        assert_eq!(f(123456789012.35, 1), "123456789012.4");
     }
     #[test]
     fn g_cases() {

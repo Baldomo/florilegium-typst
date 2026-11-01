@@ -13,9 +13,9 @@ fn escape(id: &str) -> String {
 
 fn lua_side(id: &str) -> Option<String> {
     let script = root().join("../tools/oracle/case.lua");
-    let out = Command::new("mise").args(["exec", "--", "lua"]).arg(&script).arg(id)
-        .current_dir(root().join("..")).output().ok()
-        .or_else(|| Command::new("lua").arg(&script).arg(id).output().ok())?;
+    let via_mise = Command::new("mise").args(["exec", "--", "lua"]).arg(&script)
+        .arg(id).current_dir(root().join("..")).output().ok().filter(|o| o.status.success());
+    let out = via_mise.or_else(|| Command::new("lua").arg(&script).arg(id).output().ok())?;
     out.status.success().then(|| String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
