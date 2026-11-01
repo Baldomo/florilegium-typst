@@ -39,7 +39,7 @@ pub struct Opts {
     pub lift: Option<f64>,
     /// reserved for figures
     pub p: Option<Vec<f64>>,
-    pub v: Option<f64>,
+    pub v: Option<Vec<f64>>,
 }
 
 /// A primitive by name: `Scaled` ones are drawn after `ink.scale(s)` and take only the

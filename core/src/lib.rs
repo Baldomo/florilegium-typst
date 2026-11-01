@@ -1,4 +1,5 @@
 // Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
+pub mod figures;
 pub mod flora;
 pub mod fmt;
 pub mod ink;

@@ -73,3 +73,6 @@ fn ink() { check_family("ink/"); }
 
 #[test]
 fn flora() { check_family("flora/"); }
+
+#[test]
+fn figures() { check_family("figures/"); }

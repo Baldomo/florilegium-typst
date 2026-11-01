@@ -461,4 +461,143 @@ end, function(id)
   return finish(out)
 end)
 
+-- ---------------------------------------------------------------- figures
+local figs = require("figures")
+local FIGS, FAMS = figs.figures, figs.families
+local FIG_RS = { "0.5", "1.2" }
+
+local function pnums(out, label, p)
+  local t = { label }
+  for i = 1, #p do
+    local v = p[i]
+    if v == true then v = 1 elseif v == false then v = 0 end
+    t[#t + 1] = G(v)
+  end
+  out[#out + 1] = table.concat(t, " ")
+end
+
+local function all_texts()
+  local texts = {}
+  local r = ink.rng(1)
+  for _, name in ipairs(figs.figure_order) do
+    local f = FIGS[name]
+    for _ = 1, 50 do texts[#texts + 1] = { name, f.caption(f.pick(r)) } end
+  end
+  for _, name in ipairs(figs.family_order) do
+    local f = FAMS[name]
+    for _ = 1, 5 do
+      local p = f.pick(r)
+      texts[#texts + 1] = { name, f.title(p) }
+      for _, v in ipairs(f.values) do texts[#texts + 1] = { name, f.label(v) } end
+    end
+  end
+  return texts
+end
+
+M.register("figures", function()
+  local ids = {}
+  local function add(id) ids[#ids + 1] = id end
+  for _, name in ipairs(figs.figure_order) do
+    for _, R in ipairs(FIG_RS) do
+      for k = 1, 4 do add(("figures/%s/R=%s/seed=%d"):format(name, R, k)) end
+    end
+    add(("figures/%s/R=1.2/seed=1/lift=0.4"):format(name))
+  end
+  for _, name in ipairs(figs.family_order) do
+    for i = 1, #FAMS[name].values do
+      for _, R in ipairs(FIG_RS) do
+        for k = 1, 4 do add(("figures/family-%s/v=%d/R=%s/seed=%d"):format(name, i, R, k)) end
+      end
+    end
+  end
+  for _, id in ipairs({
+    "helper/phyllotaxis/R=1.2/seed=1", "helper/phyllotaxis/R=0.1/seed=2", "helper/phyllotaxis/R=1.2/seed=3/side=-1/drift=3",
+    "helper/phyllotaxis/R=1.2/seed=4/lift=0.4", "helper/maurer/R=1/seed=1", "helper/maurer/R=1/seed=2",
+    "helper/fay/s=2/seed=1", "helper/fay/s=0.2/seed=2", "helper/fay/s=2/seed=3/open=0.5/tone=0.4",
+    "helper/compass/s=1/seed=1", "helper/compass/s=0.5/seed=1/color=0.2,0.5,0.3", "helper/vogel/N=12/R=2/spin=0.3",
+    "helper/vogel/N=150/R=0.8/spin=4", "hulls", "captions", "caption_width" }) do add("figures/" .. id) end
+  return ids
+end, function(id)
+  local rest = id:match("^figures/(.*)$")
+  local out = { id }
+  local kv = {}
+  for key, v in rest:gmatch("([^/=]+)=([^/]*)") do kv[key] = v end
+  ink.set_transform({ ink.CM, 0, 0, ink.CM, 0, 0 })
+  if kv.lift then ink.set_lift(tonumber(kv.lift)) end
+  local name = rest:match("^([^/]+)")
+  if rest == "captions" then
+    for _, t in ipairs(all_texts()) do out[#out + 1] = t[1] .. "\t" .. t[2] end
+    return table.concat(out, "\n", 2) .. "\n"
+  elseif rest == "caption_width" then
+    for _, t in ipairs(all_texts()) do out[#out + 1] = G(figs.caption_width(t[2])) end
+    return table.concat(out, "\n", 2) .. "\n"
+  elseif rest == "hulls" then
+    for i = 1, #figs.solids do
+      local v = figs.solids[i][3]
+      local t = { "solid" .. i }
+      for _, q in ipairs(v) do t[#t + 1] = G(q[1]) t[#t + 1] = G(q[2]) t[#t + 1] = G(q[3]) end
+      out[#out + 1] = table.concat(t, " ")
+      local h = figs.hull(i)
+      nums(out, #h.faces, #h.edges, h.radius)
+      for _, f in ipairs(h.faces) do pnums(out, "n", { f.n[1] + 0.0, f.n[2] + 0.0, f.n[3] + 0.0 }) pnums(out, "f", f.v) end
+      for _, e in ipairs(h.edges) do pnums(out, "e", { e.a, e.b, e.f[1], e.f[2] or -1 }) end
+    end
+    local cube, octa = figs.solids[2][3], figs.cyclic({ { 2, 0, 0 } })
+    for _, tr in ipairs({ { cube, 1 / (2 + math.sqrt(2)) }, { cube, 0.5 }, { octa, 1 / 3 }, { figs.solids[4][3], 0.2 }, { figs.solids[5][3], 0.5 } }) do
+      local pts = figs.truncate(tr[1], tr[2])
+      local t = { "trunc" .. #pts }
+      for _, q in ipairs(pts) do t[#t + 1] = G(q[1]) t[#t + 1] = G(q[2]) t[#t + 1] = G(q[3]) end
+      out[#out + 1] = table.concat(t, " ")
+      local h = figs.hull_of(pts)
+      nums(out, #h.faces, #h.edges, h.radius)
+    end
+    return table.concat(out, "\n", 2) .. "\n"
+  elseif name == "helper" then
+    local what = rest:match("^helper/([^/]+)/")
+    local r = ink.rng(tonumber(kv.seed) or 1)
+    if what == "phyllotaxis" then
+      local o = {}
+      if kv.side then o.side = tonumber(kv.side) end
+      if kv.drift then o.drift = tonumber(kv.drift) end
+      figs.phyllotaxis(r, tonumber(kv.R), o)
+    elseif what == "maurer" then
+      figs.maurer(r, tonumber(kv.R))
+    elseif what == "fay" then
+      figs.fay(r, tonumber(kv.s), { open = tonumber(kv.open), tone = tonumber(kv.tone) })
+    elseif what == "compass" then
+      local c
+      if kv.color then local a, b, d = kv.color:match("^([^,]+),([^,]+),([^,]+)$") c = { tonumber(a), tonumber(b), tonumber(d) } end
+      nums(out, figs.compass(r, tonumber(kv.s), { color = c }))
+    elseif what == "vogel" then
+      for _, q in ipairs(figs.vogel(tonumber(kv.N), tonumber(kv.R), tonumber(kv.spin))) do nums(out, q[1], q[2], q[3], q[4]) end
+    else
+      error("bad figures id: " .. id)
+    end
+    nums(out, r.u())
+    ink.flush()
+    return finish(out)
+  end
+  local R, r = tonumber(kv.R), ink.rng(tonumber(kv.seed))
+  local fam = name:match("^family%-(.*)$")
+  if fam then
+    local f = FAMS[fam]
+    local p = f.pick(r)
+    pnums(out, "p", p)
+    local v = f.values[tonumber(kv.v)]
+    if type(v) == "table" and type(v[1]) ~= "table" then pnums(out, "v", v) elseif type(v) == "number" then nums(out, v) end
+    out[#out + 1] = f.label(v)
+    f.draw(r, R, v, p)
+  else
+    local f = FIGS[name]
+    if not f then error("bad figures id: " .. id) end
+    local p = f.pick(r)
+    pnums(out, "p", p)
+    out[#out + 1] = f.caption(p)
+    f.draw(r, R, p)
+  end
+  nums(out, r.u())
+  ink.flush()
+  return finish(out)
+end)
+
 return M
