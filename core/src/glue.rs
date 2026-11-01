@@ -102,16 +102,23 @@ pub fn colors(ir: f64, ig: f64, ib: f64, ar: f64, ag: f64, ab: f64) {
     ink::set_accent(ar, ag, ab);
 }
 
-/// one rng per page; primitives drawn from TeX fork it in call order
+/// one rng per page; primitives drawn from TeX fork it in call order. Lua-faithful state for
+/// the oracle and the CLI: NOT part of the plugin API (the plugin passes explicit seeds).
 pub fn seed(page: i64, fixed: Option<i64>) -> i64 {
-    let s = match fixed { Some(f) => f * 7919 + page * 131, None => page * 97 + 1030 };
+    let s = match fixed {
+        Some(f) => f.wrapping_mul(7919).wrapping_add(page.wrapping_mul(131)),
+        None => page.wrapping_mul(97).wrapping_add(1030),
+    };
     PAGE_RNG.with(|r| *r.borrow_mut() = Rng::new(s as f64));
     s
 }
 
-/// every entry point starts with an empty sink and, on error, leaves nothing half drawn
+/// every entry point starts from a fresh ink state (pale, lift, colors, transform, sink) and
+/// the default current colors, so no call depends on an earlier one; on error nothing is left
+/// half drawn
 fn entry<T>(f: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
-    ink::take_output();
+    ink::reset();
+    CURRENT.with(|c| c.set(DEFAULT_COLORS));
     let r = f();
     if r.is_err() {
         ink::reset();
@@ -145,11 +152,12 @@ fn with_colors<T>(inkhex: &str, acchex: &str, f: impl FnOnce() -> Result<T, Stri
 // ---------------------------------------------------------------- draw
 /// \florilegiumdraw{name}{s, opts}: one primitive at the origin of the current scope (here
 /// the origin of the page, in cm); the names of the theme's primitives work too. Returns the
-/// SVG of it.
-pub fn draw(name: &str, size: f64, o: &Opts, inkhex: &str, acchex: &str, theme: Option<&str>) -> Result<String, String> {
+/// SVG of it. `seed` seeds the rng the primitive's own is forked from (florilegium.lua's
+/// `page_rng.fork()`); "" colors are ink's defaults.
+pub fn draw(name: &str, size: f64, o: &Opts, inkhex: &str, acchex: &str, theme: Option<&str>, seed: i64) -> Result<String, String> {
     entry(|| with_colors(inkhex, acchex, || {
         ink::set_transform([CM, 0.0, 0.0, CM, 0.0, 0.0]);
-        let rng = page_rng().fork();
+        let rng = Rng::new(seed as f64).fork();
         grow::draw_named(theme, name, &rng, size, o)?;
         ink::flush();
         svg::standalone(&ink::take_output())
@@ -157,10 +165,10 @@ pub fn draw(name: &str, size: f64, o: &Opts, inkhex: &str, acchex: &str, theme: 
 }
 
 /// \florilegiumdraw{ghost}{"flower", {s=1.4}}: any primitive drawn pale (`o.lift`)
-pub fn draw_ghost(inner: &str, size: f64, o: &Opts, inkhex: &str, acchex: &str, theme: Option<&str>) -> Result<String, String> {
+pub fn draw_ghost(inner: &str, size: f64, o: &Opts, inkhex: &str, acchex: &str, theme: Option<&str>, seed: i64) -> Result<String, String> {
     entry(|| with_colors(inkhex, acchex, || {
         ink::set_transform([CM, 0.0, 0.0, CM, 0.0, 0.0]);
-        let rng = page_rng().fork();
+        let rng = Rng::new(seed as f64).fork();
         let mut res = Ok(());
         flora::ghost(o.lift, || res = grow::draw_named(theme, inner, &rng, size, o));
         res?;
@@ -207,7 +215,10 @@ fn placement(name: &str) -> (f64, f64, f64, f64, Opts) {
 pub fn ornament(name: &str, size_sp: i64, inkhex: &str, acchex: &str, angle: f64, seed: Option<i64>, count: i64,
                 theme: Option<&str>) -> Result<String, String> {
     entry(|| {
-        let s = match seed { Some(sd) => sd * 7919 + 17, None => count * 7919 + 4243 };
+        let s = match seed {
+            Some(sd) => sd.wrapping_mul(7919).wrapping_add(17),
+            None => count.wrapping_mul(7919).wrapping_add(4243),
+        };
         with_colors(inkhex, acchex, || {
             let big_s = size_sp as f64 * SP_CM;
             let p = placement(name);

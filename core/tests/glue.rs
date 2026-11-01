@@ -74,10 +74,10 @@ fn errors_leave_nothing_behind() {
     bad = args();
     bad.background = Some("zzz".into());
     assert!(svg::page(&bad).unwrap_err().contains("not a color"));
-    assert!(glue::draw("nosuch", 1.0, &Opts::default(), "", "", None).unwrap_err().contains("nosuch"));
+    assert!(glue::draw("nosuch", 1.0, &Opts::default(), "", "", None, 1).unwrap_err().contains("nosuch"));
     assert!(glue::ornament("nosuch", 786432, "", "", 0.0, None, 1, None).is_err());
     assert!(glue::ornament("flower", 786432, "xyz", "", 0.0, None, 1, None).is_err());
-    assert!(glue::draw("flower", 1.0, &Opts::default(), "", "", Some("nosuch")).is_err());
+    assert!(glue::draw("flower", 1.0, &Opts::default(), "", "", Some("nosuch"), 1).is_err());
     florilegium_core::reset();
     assert_eq!(svg::page(&args()).unwrap().svg, first);
     // without the reset of the test: the failed calls reset the state themselves
@@ -158,4 +158,31 @@ fn typst_lengths_match_tex() {
     assert!((typst(mm(297.0)) - svg::sp("297mm").unwrap()).abs() <= 1);
     assert!((typst(11.0 * 72.0) - svg::sp("11in").unwrap()).abs() <= 1);
     println!("{}", report.join("\n"));
+}
+
+#[test]
+fn draw_is_stateless() {
+    let o = Opts::default();
+    florilegium_core::reset();
+    let a = glue::draw("flower", 1.2, &o, "", "", None, 5).unwrap();
+    // other calls in between, with colors and a seed of their own, change nothing
+    glue::seed(3, Some(9));
+    glue::draw("lily", 1.0, &o, "5B2A1F", "2F6B3A", None, 6).unwrap();
+    glue::draw_ghost("flower", 1.0, &Opts { lift: Some(0.4), ..Default::default() }, "", "", None, 7).unwrap();
+    assert_eq!(glue::draw("flower", 1.2, &o, "", "", None, 5).unwrap(), a);
+    assert_ne!(glue::draw("flower", 1.2, &o, "", "", None, 6).unwrap(), a);
+    florilegium_core::reset();
+    assert_eq!(glue::draw("flower", 1.2, &o, "", "", None, 5).unwrap(), a);
+}
+
+#[test]
+fn huge_seeds_wrap() {
+    let _ = glue::seed(i64::MAX, Some(i64::MAX));
+    let _ = glue::seed(i64::MAX, None);
+    assert!(glue::ornament("flower", 786432, "", "", 0.0, Some(i64::MAX), i64::MAX, None).is_ok());
+    assert!(glue::ornament("flower", 786432, "", "", 0.0, None, i64::MAX, None).is_ok());
+    let mut a = args();
+    a.seed = Some(i64::MAX);
+    a.page = i64::MAX;
+    assert!(glue::garden(&a).is_ok());
 }

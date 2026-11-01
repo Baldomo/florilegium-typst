@@ -93,7 +93,7 @@ pub fn run(id: &str) -> Result<String, String> {
                 glue::ornament(name, size, ink, accent, angle, seed, count, theme)
             } else {
                 let seed: i64 = kv(rest, "seed").and_then(|s| s.parse().ok()).ok_or_else(bad)?;
-                glue::seed(1, Some(seed));
+                let seed = seed.wrapping_mul(7919).wrapping_add(131); // Lua's seed(1, s); draw forks it
                 let o = Opts {
                     lift: num("lift")?, side: num("side")?, drift: num("drift")?,
                     trail: (kv(rest, "trail") == Some("false")).then_some(false),
@@ -101,9 +101,9 @@ pub fn run(id: &str) -> Result<String, String> {
                 };
                 let s = num("s")?.ok_or_else(bad)?;
                 if name == "ghost" {
-                    glue::draw_ghost(kv(rest, "inner").ok_or_else(bad)?, s, &o, ink, accent, theme)
+                    glue::draw_ghost(kv(rest, "inner").ok_or_else(bad)?, s, &o, ink, accent, theme, seed)
                 } else {
-                    glue::draw(name, s, &o, ink, accent, theme)
+                    glue::draw(name, s, &o, ink, accent, theme, seed)
                 }
             }
         }
