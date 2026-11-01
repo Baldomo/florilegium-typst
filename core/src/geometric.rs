@@ -745,6 +745,6 @@ fn theme_flora(f: &mut Flora) {
 }
 
 pub fn theme_def() -> ThemeDef {
-    ThemeDef { flora: theme_flora, motifs: Some(motifs), page: None }
+    ThemeDef { flora: theme_flora, motifs: Some(motifs), page: None, named: None }
 }
 

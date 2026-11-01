@@ -79,6 +79,7 @@ pub fn run(id: &str) -> Result<String, String> {
             "seed" => seed = Some(num(v)?),
             "R" => big_r = Some(num(v)?),
             "p" => { o.p = Some(list(v)?); any = true }
+            "vs" => { o.v = Some(list(v.split_once(',').map(|(a, b)| format!("{a},{b}")).ok_or_else(bad)?.as_str())?) }
             "vi" => {
                 let f = figures::family(name).ok_or_else(bad)?;
                 o.v = Some(f.values.get(num(v)? as usize - 1).ok_or_else(bad)?.clone());

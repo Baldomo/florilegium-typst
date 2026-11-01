@@ -905,6 +905,9 @@ M.register("math", function()
       add(("math/%s/R=0.5/seed=%d/vi=%d/p=%s"):format(name, 1 + i % 3, i, csv(FAMS[name].pick(ink.rng(60 + i)))))
     end
   end
+  for _, c in ipairs({ { "cube", "0,0.3" }, { "cube", "1,0.2" }, { "dodeca", "2,0.3" }, { "dodeca", "3,0.6" }, { "cube", "0,0.45" } }) do
+    add(("math/%s/R=1.2/seed=1/vs=%s"):format(c[1], c[2]))
+  end
   add("math/rose/R=1.2/seed=1/v=9,4")
   add("math/archimedes/R=1.2/seed=2/v=5")
   for _, R in ipairs(MATH_R) do
@@ -937,6 +940,13 @@ end, function(id)
   ink.set_transform({ ink.CM, 0, 0, ink.CM, 0, 0 })
   local r = ink.rng(tonumber(kv.seed))
   local o
+  if kv.vs then
+    local a, b = kv.vs:match("^(%d),(.+)$")
+    local cf, df = FAMS.cube.values, FAMS.dodeca.values
+    local solid = ({ [0] = cf[1][1], cf[4][1], df[1][1], df[4][1] })[tonumber(a)]
+    kv.v = nil
+    o = { v = { solid, tonumber(b), "x" } }
+  end
   if kv.p or kv.v or kv.vi or kv.color then
     o = { p = kv.p and uncsv(kv.p), v = kv.v and uncsv(kv.v), color = kv.color and uncsv(kv.color) }
     if kv.vi then o.v = FAMS[name].values[tonumber(kv.vi)] end

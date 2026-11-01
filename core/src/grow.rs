@@ -145,6 +145,19 @@ impl Flora {
             None => if let Some(Prim::Scaled(f)) = flora::prim(name) { f(rng, o) },
         }
     }
+    pub fn draw_named(&self, name: &str, rng: &Rng, s: f64, o: &Opts) -> Result<(), String> {
+        let scaled = |f: &dyn Fn()| { ink::push(); ink::scale(s, None); f(); ink::pop(); };
+        match self.prims.get(name) {
+            Some(GPrim::Sized(f)) => { f(rng, s, o); return Ok(()) }
+            Some(GPrim::Scaled(f)) => { scaled(&|| f(rng, o)); return Ok(()) }
+            None => {}
+        }
+        match flora::prim(name) {
+            Some(Prim::Sized(f)) => { f(rng, s, o); Ok(()) }
+            Some(Prim::Scaled(f)) => { scaled(&|| f(rng, o)); Ok(()) }
+            None => Err(format!("florilegium: no primitive '{name}'")),
+        }
+    }
     pub fn stem(&self, pts: &[Pt], w0: f64, w1: f64, c: Option<Color>, op: Option<f64>, tip: Option<f64>) {
         match &self.stem { Some(f) => f(pts, w0, w1, c, op, tip), None => flora::stem(pts, w0, w1, c, op, tip) }
     }
@@ -320,10 +333,14 @@ fn base_motifs() -> Vec<Motif> {
 // ---------------------------------------------------------------- themes
 pub type PageFn = fn(&G) -> Result<PageResult, String>;
 
+/// a theme's own by-name drawing with errors: None when the name is not the theme's
+pub type NamedFn = fn(&str, &Rng, f64, &Opts) -> Option<Result<(), String>>;
+
 pub struct Theme {
     pub flora: Flora,
     pub motifs: Vec<Motif>,
     pub page: Option<PageFn>,
+    pub named: Option<NamedFn>,
 }
 
 /// What a theme module brings (see the module docs).
@@ -331,6 +348,7 @@ pub struct ThemeDef {
     pub flora: fn(&mut Flora),
     pub motifs: Option<fn(Vec<Motif>, &Flora) -> Vec<Motif>>,
     pub page: Option<PageFn>,
+    pub named: Option<NamedFn>,
 }
 
 /// The registry of the themes other than flora. Tasks 7 and 8 add their arms:
@@ -350,7 +368,7 @@ thread_local! {
 }
 
 fn base() -> Rc<Theme> {
-    BASE.with(|b| b.borrow_mut().get_or_insert_with(|| Rc::new(Theme { flora: Flora::default(), motifs: base_motifs(), page: None })).clone())
+    BASE.with(|b| b.borrow_mut().get_or_insert_with(|| Rc::new(Theme { flora: Flora::default(), motifs: base_motifs(), page: None, named: None })).clone())
 }
 
 /// `M.theme`: select the theme for the next page. None, "" and "flora" are the garden as it
@@ -366,7 +384,7 @@ pub fn theme(name: Option<&str>) -> Result<(), String> {
                 (def.flora)(&mut tf);
                 let rows = base().motifs.clone();
                 let motifs = match def.motifs { Some(f) => f(rows, &tf), None => rows };
-                let t = Rc::new(Theme { flora: tf, motifs, page: def.page });
+                let t = Rc::new(Theme { flora: tf, motifs, page: def.page, named: def.named });
                 THEMES.with(|m| m.borrow_mut().insert(name.to_string(), t.clone()));
                 t
             }
@@ -374,6 +392,17 @@ pub fn theme(name: Option<&str>) -> Result<(), String> {
     };
     CURRENT.with(|c| *c.borrow_mut() = Some(th));
     Ok(())
+}
+
+/// A primitive drawn by name in a theme (`\florilegiumdraw`): selects the theme, then draws
+/// through its own entry point, the theme's primitives or flora's. Unknown names and
+/// unusable options are errors, not silence. Scaled primitives (leaf, leaflet, petal) are
+/// drawn after `ink.scale(size)`.
+pub fn draw_named(theme_name: Option<&str>, name: &str, rng: &Rng, size: f64, o: &Opts) -> Result<(), String> {
+    theme(theme_name)?;
+    let th = current();
+    if let Some(r) = th.named.and_then(|f| f(name, rng, size, o)) { return r }
+    th.flora.draw_named(name, rng, size, o)
 }
 
 /// the theme in force (flora until `theme` is called)

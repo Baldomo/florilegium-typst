@@ -367,18 +367,21 @@ fn first_pick(f: &figures::Figure) -> usize { (f.pick)(&Rng::new(1.0)).len() }
 
 fn index_ok(x: f64, n: usize) -> bool { x.fract() == 0.0 && x >= 1.0 && x <= n as f64 }
 
+fn finite(xs: &[f64]) -> bool { xs.iter().all(|x| x.is_finite()) }
+
 /// `M.flora[name](rng, R, o)`: a figure or family by name with `o.p` / `o.v`; what the Lua
-/// would fail on (a short or out-of-range list) is an error here, not a panic.
+/// would fail on (a short, non-finite or out-of-range list) is an error here, not a panic.
 pub fn draw(name: &str, rng: &Rng, big_r: f64, o: &Opts) -> Result<(), String> {
+    let bad = |what: &str| format!("florilegium: math {name}: bad {what}");
+    if !big_r.is_finite() { return Err(bad("size")) }
     if name == "hedera" {
         figures::compass(rng, big_r, o.color);
         return Ok(());
     }
-    let bad = |what: &str| format!("florilegium: math {name}: bad {what}");
     if let Some(f) = figures::figure(name) {
         let p = match &o.p {
             Some(p) => {
-                if p.len() < first_pick(f) { return Err(bad("p")) }
+                if p.len() < first_pick(f) || !finite(p) { return Err(bad("p")) }
                 if name == "polyhedron" && !index_ok(p[0], figures::solids().len()) { return Err(bad("p")) }
                 if name == "knot" && !index_ok(p[0], 6) { return Err(bad("p")) }
                 p.clone()
@@ -391,13 +394,18 @@ pub fn draw(name: &str, rng: &Rng, big_r: f64, o: &Opts) -> Result<(), String> {
     if let Some(f) = figures::family(name) {
         let v = match &o.v { Some(v) => v.clone(), None => f.values[0].clone() };
         let p = match &o.p { Some(p) => p.clone(), None => (f.pick)(rng) };
-        if v.len() < f.values[0].len() || p.len() < (f.pick)(&Rng::new(1.0)).len() { return Err(bad("v or p")) }
-        if o.v.is_some() && matches!(name, "cube" | "dodeca" | "knots") && !f.values.iter().any(|x| *x == v) { return Err(bad("v")) }
+        let need_v = if matches!(name, "cube" | "dodeca") { 2 } else { f.values[0].len() };
+        if v.len() < need_v || !finite(&v) { return Err(bad("v")) }
+        if p.len() < (f.pick)(&Rng::new(1.0)).len() || !finite(&p) { return Err(bad("p")) }
         if name == "knots" && !index_ok(v[1], 6) { return Err(bad("v")) }
         (f.draw)(rng, big_r, &v, &p);
         return Ok(());
     }
     Err(format!("florilegium: math has no primitive '{name}'"))
+}
+
+fn named(name: &str, rng: &Rng, s: f64, o: &Opts) -> Option<Result<(), String>> {
+    if name == "hedera" || figures::figure(name).is_some() || figures::family(name).is_some() { Some(draw(name, rng, s, o)) } else { None }
 }
 
 fn theme_flora(f: &mut Flora) {
@@ -408,5 +416,38 @@ fn theme_flora(f: &mut Flora) {
 }
 
 pub fn theme_def() -> ThemeDef {
-    ThemeDef { flora: theme_flora, motifs: None, page: Some(page) }
+    ThemeDef { flora: theme_flora, motifs: None, page: Some(page), named: Some(named) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn opts(p: Option<Vec<f64>>, v: Option<Vec<f64>>) -> Opts { Opts { p, v, ..Default::default() } }
+
+    #[test]
+    fn named_entry_surfaces_errors() {
+        let r = Rng::new(1.0);
+        let d = |n: &str, o: &Opts| grow::draw_named(Some("math"), n, &r, 1.0, o);
+        assert!(d("knot", &opts(Some(vec![9.0, 0.0]), None)).is_err());
+        assert!(d("knot", &opts(Some(vec![1.0]), None)).is_err());
+        assert!(d("polyhedron", &opts(Some(vec![f64::NAN, 0.0, 0.0]), None)).is_err());
+        assert!(d("knots", &opts(None, Some(vec![3.0, 99.0]))).is_err());
+        assert!(d("cube", &opts(None, Some(vec![0.0]))).is_err());
+        assert!(d("nosuch", &Opts::default()).is_err());
+        assert!(d("knot", &opts(Some(vec![2.0, 30.0]), None)).is_ok());
+        assert!(d("flower", &Opts::default()).is_ok());
+        assert!(grow::draw_named(None, "nosuch", &r, 1.0, &Opts::default()).is_err());
+    }
+
+    #[test]
+    fn truncation_values_not_listed_draw() {
+        let r = Rng::new(1.0);
+        for name in ["cube", "dodeca"] {
+            for v in [[0.0, 0.3], [1.0, 0.9], [2.0, 0.5], [3.0, 1.0 / 3.0], [0.0, 0.0], [0.0, 1.0], [7.0, 0.2], [0.0, -1.0], [0.0, 5.0]] {
+                assert!(draw(name, &r, 1.0, &opts(None, Some(v.to_vec()))).is_ok(), "{name} {v:?}");
+            }
+        }
+        ink::take_output();
+    }
 }
