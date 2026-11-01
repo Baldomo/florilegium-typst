@@ -2,8 +2,186 @@ Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
 
 # florilegium (Typst)
 
-A Typst port of florilegium, procedurally generated Delft-blue floral page margins.
-This file is a stub: Task 17 expands it into the package manual.
+Procedurally generated Delft-blue floral page margins for Typst: a port of
+[florilegium](https://github.com/kevinraymond/florilegium) (LaTeX/LuaLaTeX, version 1.2).
+No image files: every petal, leaf and stem is a parametric curve computed by a wasm
+plugin (a Rust port of the original Lua) while the document is compiled, painted like a
+watercolor, and drawn as one SVG behind each page. Every page gets its own garden.
+
+Two compositions: **authored** (the default: stems, leaves and flowers placed by hand for
+A4 with a 68 mm left margin, every parameter sampled) and **grown** (a plant grown to fit
+whatever page layout and free space the text leaves).
+
+## Usage
+
+```typ
+#import "@preview/florilegium:0.1.0": *
+
+#set page(paper: "a4")
+#show: florilegium.with()          // authored; or mode: "grown"
+
+= Hello
+Text beside the garden.
+```
+
+From a clone of the repository (`lib/`), import the source instead:
+`#import "src/lib.typ": *` (and `--root` the repository if the document is elsewhere), or
+install it as a local package (`@local/florilegium:0.1.0`).
+
+The template sets the page margins (default left 68 mm, right 22 mm, top 32 mm,
+bottom 30 mm), the header and footer distances, and owns `page.background` (a background
+set by the user is replaced; with `garden: false` there is none). Set a header or footer
+*after* the `show` rule. The page must have a fixed width and height.
+
+Examples (from `lib/`): `typst compile examples/demo.typ --root .` is the authored
+composition with the text of `florilegium.tex`; `examples/grown.typ` is the grown one
+with section flowers, blooms, an initial, inline ornaments, aging and a math-theme last
+page.
+
+## API
+
+| LaTeX | Typst |
+|---|---|
+| `\usepackage[opts]{florilegium}` | `#show: florilegium.with(..)` |
+| option `authored` / `grown` | `mode: "authored"` (default) / `"grown"` |
+| `nomargin` | `garden: false` |
+| `novisitors` | `visitors: false` |
+| `sections` | `sections: true` (numbered headings of level 1 and 2 get a flower) |
+| `aging` | `aging: true` |
+| `theme=`, `density=`, `intensity=` | `theme: "flora"` (also `"geometric"`, `"math"`), `density: 1`, `intensity: 1` |
+| colors `ink`, `accent` | `ink: rgb("#2456C4")`, `accent: rgb("#B4662F")` |
+| `\def\florilegiumseed{7}` | `seed: 7` (`none`: the garden follows the page number) |
+| `\florilegiumtextend` | `#textend()` |
+| `\florilegiumbloom[motif]` | `#bloom()` / `#bloom(motif: "umbel")` |
+| `\florilegiumage{a}` | `#age(0.3)` |
+| `\florilegiumtheme{name}` | `#theme("math")` |
+| `\florilegiuminitial[4]{L}orem...` | `#initial("L", lines: 4)[orem...]` |
+| `\florilegiuminitialfont{f.otf}` | `initial-font: read("f.otf", encoding: none)` on the template, `#initial-font(..)` later, or `font:` on `#initial` |
+| `\florilegiumframe[explain]{k}{n}` | `#frame(k, n, explain: false)` |
+| `\florilegiumornament[..]{name}` | `#ornament("leaf", size: 1em, ink: none, accent: none, angle: 0deg, seed: auto)` |
+| `\florilegiumdraw{name}{size, {opts}}` | `#draw("flower", 1.2, tone: 0.3, ..)` |
+
+Differences of the Typst API from the spec of the port, where the code wins:
+`bloom` takes the motif as the named argument `motif:`; `initial` takes the letter and
+then the rest of the paragraph (`#initial("L")[orem ...]`).
+
+### Template options
+
+| option | default | meaning |
+|---|---|---|
+| `mode` | `"authored"` | `"authored"` (A4, 68 mm left margin) or `"grown"` |
+| `garden` | `true` | `false`: no margin at all |
+| `visitors` | `true` | butterflies, bees, snail, bird |
+| `sections` | `false` | a flower beside every numbered heading of level 1 and 2 |
+| `aging` | `false` | the season follows the page: spring on the first page, autumn on the last |
+| `theme` | `"flora"` | `"flora"`, `"geometric"`, `"math"` (a theme per page with `theme(..)`) |
+| `density`, `intensity` | `1` | how much grows; how saturated (density reduces exactly at 1) |
+| `ink`, `accent` | Delft blue, copper | colors (RGB; other color spaces are converted) |
+| `seed` | `none` | integer >= 1, or the page number |
+| `margin` | `(left: 68mm, right: 22mm, top: 32mm, bottom: 30mm)` | as `page(margin: ..)` |
+| `twoside` | `false` | `left`/`right` are then the inside/outside margins |
+| `headsep`, `headheight`, `footskip` | `8mm`, `12pt`, `30pt` of TeX | LaTeX's distances: the head rule and the foot line (TeX points, converted) |
+| `initial-font` | `auto` | bytes of an OpenType/TrueType file for the initials |
+
+Other functions: `#bloom(motif: "")` (a flower beside the line it stands in; motifs:
+`lily`, `blossoms`, `cyme`, `umbel`, `bud`, `butterfly`, ... `""` lets the garden choose);
+`#age(v)` (0 spring, 0.5 summer, 1 autumn; ignored with `aging: true`);
+`#theme(name)`; `#frame(k, n)` (frame `k` of `n` of the growth); `#textend()` (the text ends
+here: in grown mode the garden spills into the space below); `#ornament(name, ..)` (an inline
+primitive in a box of side `size` on the baseline, depth 0.15 size); `#draw(name, size, ..opts)`
+(a primitive drawn at the current point as a zero-size box, `size` in cm, `opts` the
+primitive's options: `tone`, `w`, `bend`, `side`, `depth`, ...); `#initial(..)`;
+`#initial-font(..)`.
+
+## Judgment calls and differences from the LaTeX package
+
+- **Compiled in Rust, not Lua.** The drawing is a procedure-for-procedure port of the Lua
+  (same rng draw order and arithmetic). The Lua is the oracle: the native build is checked
+  byte for byte against it (see Testing).
+- **Geometry.** The template sets the margins (Typst has no `geometry`); lengths become
+  scaled points the way TeX would hold them. A page is mirrored by the same rule as
+  `geometry()` (`twoside`).
+- **Page number and seed.** The garden is seeded from the logical page number
+  (`counter(page)`, LaTeX's `\value{page}`), as in Lua. With `twoside: true` the mirroring
+  parity follows the *physical* page, so a reset of the logical counter does not swap sides.
+  An explicit `seed:` replaces the page-number seed.
+- **No `seed: "random"`.** (`os.time` in LaTeX.) Typst compilation is deterministic; it is
+  an error with a message saying so. Give an integer.
+- **`draw` default seed.** In LaTeX each draw is the next fork of the page rng, in TeX's
+  execution order. Typst has no such order, so the default seed is
+  `(seed or 1) * 7919 + physical page * 131 + k * 977` with `k` the document count of draws; an
+  explicit `seed:` overrides it. A draw that moves to another page on reflow changes.
+  Likewise `ornament` defaults to `n * 7919 + 4243` for the n-th ornament of the document
+  and `seed * 7919 + 17` for an explicit one.
+- **Initials** have no `\hangafter` in Typst: the paragraph is wrapped beside the tile with
+  [droplet](https://typst.app/universe/package/droplet) 0.3.1, the tile being the cap. The
+  letter's outline is read from the bundled Latin Modern Roman Bold (or your font); the
+  letter is also set transparent over the tile so the text extracts. The tile uses its own
+  rng stream (`seed * 7919 + 5003`, `seed` the argument or the document count of initials);
+  LaTeX forks whatever page rng TeX last seeded, which cannot be reproduced outside TeX.
+- **Captions of the math theme** (formulas, figures' labels) are set by Typst in the
+  document's font and Typst's math font, so the glyphs differ from LaTeX's Computer Modern.
+  Position, size, rotation, color and opacity are the original's.
+- **Lengths (Dimens rounding).** See the notes below: a length is exactly TeX's for short
+  decimals in bp, mm, cm, in and TeX pt and rounded otherwise (at most 1 sp, invisible).
+- **`textend` semantics.** `#textend()` ends the paragraph and leaves a block-level mark;
+  the page it is on grows with spill, from the height of the material above the mark (LaTeX
+  measured `\pagetotal + \pagedepth`; Typst also counts the paragraph spacing).
+- **Aging.** A page takes the last `age` / `frame` mark on or before it. With `aging: true`
+  the season follows the page and the last page (`counter(page).final()`), and wins over
+  `age` marks, as in LaTeX; no second run is needed, Typst converges by itself.
+- **An unknown primitive** is an error (`florilegium: no primitive '..'`).
+- **Colors.** The plugin accepts `RRGGBB` and `#RRGGBB`; `ink` and `accent` are `rgb` values.
+
+## Wasm against native
+
+The plugin is the same Rust as the native build; Rust's wasm std uses compiler-builtins'
+libm for `sin`, `cos`, `powf`, `exp`, ..., which could differ from glibc's by one ulp. Measured
+with rust 1.99.1 on the `svg.lua --seed N` pages for N = 1..8 (default A4 layout, 2.6 to
+3.1 MB of SVG each): **0 differing bytes** against the native build. Another seed could
+differ in the last digit of a coordinate (the output has one decimal); that is a libm ulp
+and not a drawing difference.
+
+## Performance
+
+A page takes about 1.6 s in the plugin (wasmi interprets the module) and about 2.3 s with its
+3 MB SVG drawn; `typst compile` caches the call, so it is paid once per distinct page.
+Measured (typst 0.15.1, PDF output): `examples/demo.typ`, 4 pages, 4.6 s (1.2 s/page);
+`examples/grown.typ`, 4 pages (sections, an initial, the math theme), 8.4 s (2.1 s/page).
+The native Rust build takes 0.1 s per page.
+
+## Credits
+
+- florilegium by Kevin Raymond (MIT), the original LaTeX/Lua library this ports.
+- Oklab: Björn Ottosson, "A perceptual color space for image processing" (2020).
+- mulberry32: Tommy Ettinger's public-domain generator.
+- Wong, Zongker and Salesin, "Computer-generated floral ornament", SIGGRAPH 1998: the idea
+  of the grown composition.
+- [droplet](https://typst.app/universe/package/droplet) by Eric Biedert (MIT): the
+  paragraph wrapped around the initial.
+- Latin Modern Roman 10 Bold (c) 2003-2009 B. Jackowski and J. M. Nowacki (GUST
+  e-foundry), GUST Font License; bundled in `fonts/`.
+
+## Building
+
+The plugin is committed as `src/florilegium.wasm`. To rebuild it: install the tools of
+`mise.toml` (`mise install`; rust with the `wasm32-unknown-unknown` target) and run
+
+```sh
+make wasm
+```
+
+## Testing
+
+From `lib/`, through `mise exec --` so that the pinned versions run:
+
+```sh
+cargo test --release --manifest-path core/Cargo.toml   # oracle comparisons, wasm vs native (the grown family takes ~90 s)
+tt run                                                  # tytanic: Typst API tests and reference images
+tools/oracle/gen.sh                                     # regenerates the oracle fixtures from ../florilegium (needs lua)
+```
+
+Look at rendered pages too: `typst compile examples/demo.typ --root . --format png`.
 
 ## Notes
 

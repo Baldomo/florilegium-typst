@@ -2,11 +2,22 @@
 name = "florilegium"
 version = "0.1.0"
 entrypoint = "src/lib.typ"
-authors = ["Kevin Raymond"]
+authors = ["Kevin Raymond (florilegium)", "Typst port"]
 license = "MIT"
 description = "Procedurally generated Delft-blue floral page margins."
-categories = ["layout"]
-exclude = ["tests", "core", "tools", "Makefile", "mise.toml", ".superpowers"]
+categories = ["layout", "visualization"]
+keywords = ["ornament", "margin", "flowers", "procedural", "decoration"]
+compiler = "0.15.0"
+exclude = [
+  "core",
+  "tools",
+  "tests",
+  "examples",
+  "Makefile",
+  "mise.toml",
+  ".superpowers",
+  ".gitignore",
+]
 
 [tool.tytanic]
 tests = "tests"
