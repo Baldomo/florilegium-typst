@@ -82,3 +82,6 @@ fn grow() { check_family("grow/"); }
 
 #[test]
 fn authored() { check_family("authored/"); }
+
+#[test]
+fn geometric() { check_family("geometric/"); }

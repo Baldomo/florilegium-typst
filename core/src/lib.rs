@@ -3,6 +3,7 @@ pub mod authored;
 pub mod figures;
 pub mod flora;
 pub mod fmt;
+pub mod geometric;
 pub mod grow;
 pub mod ink;
 

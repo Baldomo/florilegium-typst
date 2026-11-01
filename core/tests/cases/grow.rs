@@ -60,11 +60,12 @@ pub fn run(id: &str) -> Result<String, String> {
     };
     let p: Vec<&str> = rest.split('/').collect();
     let bad = || format!("bad grow id {id:?}");
-    if p.len() != 3 { return Err(bad()) }
+    if p.len() != 3 && p.len() != 4 { return Err(bad()) }
     let seed: f64 = p[0].strip_prefix("seed=").ok_or_else(bad)?.parse().map_err(|_| bad())?;
     let spill: i32 = p[1].strip_prefix("spill=").ok_or_else(bad)?.parse().map_err(|_| bad())?;
     let case = p[2].strip_prefix("case=").ok_or_else(bad)?;
     let mut g = geometry(seed, spill, case)?;
+    if let Some(t) = p.get(3) { g.theme = Some(t.strip_prefix("theme=").ok_or_else(bad)?.to_string()) }
     let mut out = vec![];
     if !anim {
         let r = grow::page(&g)?;

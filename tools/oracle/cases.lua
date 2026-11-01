@@ -461,6 +461,104 @@ end, function(id)
   return finish(out)
 end)
 
+-- ---------------------------------------------------------------- geometric
+-- the primitives of theme-geometric.lua, as the flora family drives flora's
+local geo = require("theme-geometric")
+local GEO = {
+  { "flower", "s", { 1.2, 0.16, 2.4 }, { petals = { 5, 6, 8 }, style = { 1, 2 }, tone = { 0.2, 0.5 } } },
+  { "lily", "s", { 1.1, 0.21, 2.2 }, { tilt = { 0.3, 0.7 }, tone = { 0.25, 0.45 } } },
+  { "blossom", "s", { 0.3, 0.17, 0.8 }, { tone = { 0.2, 0.5 }, eye = { "0.9,0.2,0.1" } } },
+  { "floret", "s", { 0.1, 0.05, 0.5 }, { tone = { 0.3, 0.4 }, eye = { "0.9,0.2,0.1" } } },
+  { "bud", "s", { 0.6, 0.33, 1.2 }, { tone = { 0.25, 0.5 } } },
+  { "bell", "s", { 1, 0.33, 2 }, { tone = { 0.25, 0.5 } } },
+  { "leaf", "scale", { 2, 0.35, 4 }, { depth = { 0, 0.6 }, w = { 0.15, 0.3 }, lobes = { 2, 6 }, bend = { 0.3, -0.3 }, tone = { 0.2, 0.45 } } },
+  { "leaflet", "scale", { 0.6, 0.35, 1.5 }, { w = { 0.1, 0.3 }, bend = { 0.3, -0.3 }, tone = { 0.15, 0.4 } } },
+  { "petal", "scale", { 1.2, 0.35, 3 }, { w = { 0.2, 0.5 }, tone = { 0.25, 0.5 } } },
+  { "cyme", "s", { 2, 0.33, 3 }, { side = { 1, -1 }, fork = { "false", "true" } } },
+  { "sprig", "s", { 2, 0.35, 3 }, { depth = { 2, 5 } } },
+  { "umbel", "s", { 1.2, 0.28, 2.4 }, {} },
+  { "seedhead", "s", { 1, 0.15, 2 }, { side = { 1, -1 }, drift = { 0, 5 } } },
+  { "tendril", "s", { 1, 0.16, 2 }, {} },
+  { "rosette", "s", { 0.3, 0.13, 0.6 }, { color = { "0.2,0.5,0.3" } } },
+  { "hedera", "s", { 0.36, 0.13, 0.8 }, { color = { "0.2,0.5,0.3" } } },
+  { "butterfly", "s", { 2, 0.34, 4 }, { open = { 0.3, 1 }, tone = { 0.2, 0.45 } } },
+  { "bee", "s", { 1, 0.28, 2 }, {} },
+  { "snail", "s", { 1, 0.19, 2 }, {} },
+  { "bird", "s", { 1, 0.33, 2 }, { facing = { -1, 1 }, tone = { 0.25, 0.45 } } },
+  { "crystal", "s", { 1, 0.3, 2 }, { k = { 1, 2, 3, 4, 5 } } },
+}
+local GEO_SPEC = {}
+for _, r in ipairs(GEO) do GEO_SPEC[r[1]] = r end
+local GEO_GHOSTED = { "flower", "lily", "blossom", "floret", "bud", "bell", "leaf", "leaflet", "petal", "cyme", "sprig", "umbel",
+  "seedhead", "butterfly", "bee", "snail", "bird", "crystal" }
+local GEO_GHOST_SIZES = { flower = 1.2, lily = 1.1, blossom = 0.3, floret = 0.1, bud = 0.6, bell = 1, leaf = 2, leaflet = 0.6, petal = 1.2,
+  cyme = 2, sprig = 2, umbel = 1.2, seedhead = 1, butterfly = 2, bee = 1, snail = 1, bird = 1, crystal = 1 }
+
+M.register("geometric", function()
+  local ids = {}
+  local function add(id) ids[#ids + 1] = id end
+  for _, r in ipairs(GEO) do
+    for _, s in ipairs(r[3]) do
+      for k = 1, 4 do add(("geometric/%s/%s=%s/seed=%d"):format(r[1], r[2], tostring(s), k)) end
+    end
+    for _, key in ipairs(sorted_keys(r[4])) do
+      for _, v in ipairs(r[4][key]) do
+        for k = 1, 4 do add(("geometric/%s/%s=%s/seed=%d/%s=%s"):format(r[1], r[2], tostring(r[3][1]), k, key, tostring(v))) end
+      end
+    end
+  end
+  for _, lift in ipairs(LIFTS) do
+    for _, name in ipairs(GEO_GHOSTED) do
+      for k = 1, 3 do add(("geometric/ghost/lift=%s/%s/s=%s/seed=%d"):format(lift, name, tostring(GEO_GHOST_SIZES[name]), k)) end
+    end
+  end
+  for _, st in ipairs(STEMS) do add("geometric/stem/" .. st) end
+  return ids
+end, function(id)
+  local name, rest = id:match("^geometric/([^/]+)/(.*)$")
+  local out = { id }
+  local kv, order = {}, {}
+  for key, v in rest:gmatch("([^/=]+)=([^/]*)") do kv[key] = v order[#order + 1] = key end
+  local function val(v)
+    if v == "true" then return true elseif v == "false" then return false end
+    if tonumber(v) then return tonumber(v) end
+    local a, b, c = v:match("^([^,]+),([^,]+),([^,]+)$")
+    if a and tonumber(a) then return { tonumber(a), tonumber(b), tonumber(c) } end
+    return v
+  end
+  ink.set_transform({ ink.CM, 0, 0, ink.CM, 0, 0 })
+  if name == "stem" then
+    local pts = {}
+    if kv.path == "bytes" then for i = 0, 80 do pts[#pts + 1] = { math.sin(i / 9), i / 4 } end
+    else pts = { { 0, 0 }, { 1, 0 }, { 2, 1 }, { 3, 1 }, { 3, 2 }, { 2, 3 }, { 2, 4 }, { 1, 5 }, { 0, 5 }, { 0, 6 } } end
+    if kv.scale then ink.scale(tonumber(kv.scale)) end
+    local c = kv.c and val(kv.c) or nil
+    geo.stem(pts, tonumber(kv.w0), tonumber(kv.w1), c, kv.op and tonumber(kv.op) or nil, kv.tip and tonumber(kv.tip) or nil)
+  elseif name == "ghost" then
+    local lift, n = rest:match("^lift=([^/]+)/([^/]+)/")
+    local s, r = tonumber(kv.s), ink.rng(tonumber(kv.seed))
+    flora.ghost(lift ~= "default" and tonumber(lift) or nil, function()
+      if n == "leaf" or n == "leaflet" or n == "petal" then ink.scale(s) geo.flora[n](r, {}) else geo.flora[n](r, s, {}) end
+    end)
+    nums(out, ink.get_lift())
+  else
+    local spec = GEO_SPEC[name]
+    if not spec then error("bad geometric id: " .. id) end
+    local o = {}
+    for _, key in ipairs(order) do
+      if key ~= spec[2] and key ~= "seed" then o[key] = val(kv[key]) end
+    end
+    local s, r = tonumber(kv[spec[2]]), ink.rng(tonumber(kv.seed))
+    if spec[2] == "scale" then ink.scale(s) geo.flora[name](r, o)
+    else
+      local x, y = geo.flora[name](r, s, o)
+      if x then nums(out, x, y) end
+    end
+  end
+  ink.flush()
+  return finish(out)
+end)
+
 -- ---------------------------------------------------------------- figures
 local figs = require("figures")
 local FIGS, FAMS = figs.figures, figs.families
@@ -616,6 +714,21 @@ local GROW_CASES = {
   { name = "mirror", mirror = true, marks = GROW_MARKS },
 }
 local GROW_SEEDS = { 1, 2, 3, 6, 7 }
+-- the grown garden in a theme: prefix, seed, spill, case
+local GROW_THEME_CASES = {}
+for _, seed in ipairs(GROW_SEEDS) do
+  for spill = 0, 1 do
+    for _, name in ipairs({ "summer", "autumn-marks", "density-0.4" }) do
+      GROW_THEME_CASES[#GROW_THEME_CASES + 1] = { "grow", seed, spill, name }
+    end
+  end
+end
+GROW_THEME_CASES[#GROW_THEME_CASES + 1] = { "grow", 1, 0, "mirror" }
+GROW_THEME_CASES[#GROW_THEME_CASES + 1] = { "grow", 2, 1, "mirror" }
+GROW_THEME_CASES[#GROW_THEME_CASES + 1] = { "grow/anim", 1, 0, "summer" }
+GROW_THEME_CASES[#GROW_THEME_CASES + 1] = { "grow/anim", 2, 1, "autumn-marks" }
+GROW_THEME_CASES[#GROW_THEME_CASES + 1] = { "grow/anim", 3, 0, "density-0.4" }
+GROW_THEME_CASES[#GROW_THEME_CASES + 1] = { "grow/anim", 1, 0, "mirror" }
 
 M.register("grow", function()
   local ids = {}
@@ -626,12 +739,17 @@ M.register("grow", function()
       end
     end
   end
+  for _, spec in ipairs(GROW_THEME_CASES) do
+    ids[#ids + 1] = ("%s/seed=%d/spill=%d/case=%s/theme=geometric"):format(spec[1], spec[2], spec[3], spec[4])
+  end
   return ids
 end, function(id)
   local anim, seed, spill, name = false, nil, nil, nil
   local rest = id:match("^grow/anim/(.*)$")
   if rest then anim = true else rest = id:match("^grow/(.*)$") end
-  seed, spill, name = rest:match("^seed=(%d+)/spill=(%d)/case=(.+)$")
+  local theme
+  seed, spill, name, theme = rest:match("^seed=(%d+)/spill=(%d)/case=([^/]+)/theme=(.+)$")
+  if not seed then seed, spill, name = rest:match("^seed=(%d+)/spill=(%d)/case=([^/]+)$") end
   local case
   for _, c in ipairs(GROW_CASES) do if c.name == name then case = c end end
   if not case then error("bad grow id: " .. id) end
@@ -640,6 +758,7 @@ end, function(id)
   g.colright, g.headrule, g.footy = g.textleft - 0.4, g.ytop + 0.7, 1.9
   g.seed, g.spill, g.spilly = seed, spill, spill == 1 and 19.0 or 0
   g.age, g.marks, g.visitors, g.density, g.mirror = case.age, case.marks, case.visitors, case.density, case.mirror
+  g.theme = theme
   local out = {}
   if not anim then
     local r = grow.page(g)
@@ -681,15 +800,19 @@ for s = 1, 2 do AUTH_CASES[#AUTH_CASES + 1] = { seed = s, name = "mirror", mirro
 M.register("authored", function()
   local ids = {}
   for _, c in ipairs(AUTH_CASES) do ids[#ids + 1] = ("authored/seed=%d/case=%s"):format(c.seed, c.name) end
+  for s = 1, 4 do ids[#ids + 1] = ("authored/seed=%d/case=plain/theme=geometric"):format(s) end
+  ids[#ids + 1] = "authored/seed=1/case=mirror/theme=geometric"
   return ids
 end, function(id)
-  local seed, name = id:match("^authored/seed=(%d+)/case=(.+)$")
+  local seed, name, theme = id:match("^authored/seed=(%d+)/case=([^/]+)/theme=(.+)$")
+  if not seed then seed, name = id:match("^authored/seed=(%d+)/case=([^/]+)$") end
   local case
   for _, c in ipairs(AUTH_CASES) do if c.seed == tonumber(seed) and c.name == name then case = c end end
   if not case then error("bad authored id: " .. id) end
   local g = { pw = 21, ph = 29.7, textleft = 6.8, textright = 18.8, ytop = 25.4, ybot = 3.0 }
   g.colright, g.headrule, g.footy = g.textleft - 0.4, g.ytop + 0.7, 1.9
   g.seed, g.visitors, g.mirror = case.seed, case.visitors, case.mirror
+  g.theme = theme
   authored.page(g)
   return finish({})
 end)

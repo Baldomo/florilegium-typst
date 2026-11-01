@@ -37,6 +37,10 @@ pub struct Opts {
     pub heart: Option<bool>,
     pub drift: Option<f64>,
     pub lift: Option<f64>,
+    /// geometric flower's `style`
+    pub style: Option<f64>,
+    /// geometric crystal's `k`
+    pub k: Option<f64>,
     /// reserved for figures
     pub p: Option<Vec<f64>>,
     pub v: Option<Vec<f64>>,
