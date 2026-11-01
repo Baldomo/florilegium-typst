@@ -9,19 +9,27 @@ Intro.
 
 = Title
 
+#show heading.where(level: 2): set text(size: 20pt)
+== Sub
+
 Body #lorem(10)
 
 === Deep
 
 #heading(numbering: none)[Plain]
 
-#block[#text(size: 15.4pt, weight: "bold")[#metadata(0) <pa>#box(width: 0pt)#metadata(0) <pb>Title]]
+#let oracle(size, a, b) = block[#text(size: size, weight: "bold")[#metadata(0) #label(a)#box(width: 0pt)#metadata(0) #label(b)Title]]
+#oracle(15.4pt, "pa1", "pb1")
+#oracle(20pt, "pa2", "pb2")
 
 #context {
   let ms = marks.on-page(1).filter(m => m.kind == "heading")
-  let top = query(heading).first().location().position().y
-  let dy = locate(<pb>).position().y - locate(<pa>).position().y
-  let y = (page.height - top - dy) / 1cm
-  assert.eq(ms.len(), 1)
-  assert(calc.abs(ms.first().y - y) < 0.02, message: repr((ms.first().y, y)))
+  let hs = query(heading).filter(h => h.numbering != none and h.level <= 2)
+  assert.eq(ms.map(m => m.arg), (1, 2))
+  assert.eq(hs.len(), 2)
+  for (i, h) in hs.enumerate() {
+    let dy = locate(label("pb" + str(i + 1))).position().y - locate(label("pa" + str(i + 1))).position().y
+    let y = (page.height - h.location().position().y - dy) / 1cm
+    assert(calc.abs(ms.at(i).y - y) < 0.02, message: repr((i, ms.at(i).y, y)))
+  }
 }

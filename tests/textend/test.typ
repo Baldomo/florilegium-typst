@@ -7,12 +7,16 @@
 #lorem(400)
 
 #textend()
+#metadata(0) <end>
 
 #context {
   let p = here().page()
   let e = marks.effective(counter(page).final().first(), garden.cfg(mode: "grown", seed: 3))
   let ms = marks.on-page(query(<florilegium-mark>).last().location().page())
-  assert.eq(e.spilly, ms.last().y)
+  let y = (page.height - locate(<end>).position().y) / 1cm
+  assert(calc.abs(e.spilly - y) < 0.02, message: repr((e.spilly, y)))
+  assert(e.spilly > 0 and e.spilly < page.height / 1cm)
+  assert(calc.abs(ms.last().y - y) < 0.02)
   let cfg = garden.cfg(mode: "grown", seed: 3)
   assert(garden.debug(cfg, spilly: e.spilly).svg.len() != garden.debug(cfg).svg.len())
 }
