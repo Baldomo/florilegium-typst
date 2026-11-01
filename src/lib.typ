@@ -151,6 +151,8 @@
 // The tile of an initial: a box of side `lines` baselines (`S`), the letter drawn in it,
 // and the letter itself invisibly over it, so that it can be copied.
 #let _initial-tile(letter, lines: 4, font: auto, seed: auto, ink: none, accent: none) = {
+  assert(type(letter) == str and letter.clusters().len() == 1,
+    message: "florilegium: the initial's letter must be a single character, got " + repr(letter))
   if seed == auto { _initials.step() }
   context {
     let cap = measure(text("H")).height
@@ -164,6 +166,7 @@
       ink: st.ink, accent: st.accent,
     ))
     box(width: side, height: side, {
+      [#metadata(none)<florilegium-initial-tile>]
       _svg(r, 0pt, side)
       place(top + left, text(fill: rgb(0, 0, 0, 0), size: side, letter))
     })

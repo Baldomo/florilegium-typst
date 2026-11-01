@@ -5,5 +5,5 @@
 #let armenian = read("DroidSansArmenian.ttf", encoding: none)
 #initial("Ա", font: armenian, lines: 3, seed: 2)[ռանց ստեղծագործական ազատության ոչինչ չի կարող ծաղկել։ Without freedom no flower grows.]
 
-#initial-font(read("/fonts/lmroman10-bold.otf", encoding: none))
-#initial("B", lines: 2)[etween two fonts, the default one and a document-level one set here.]
+#initial-font(armenian)
+#initial("Բ", lines: 2)[ռանց ծաղիկ, a document-level font set here, drawn with the same letter shapes.]
