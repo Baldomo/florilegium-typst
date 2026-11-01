@@ -35,6 +35,8 @@ fn plugin_errors() {
     let e = err(ornament_cbor(&enc(&with(dec(&orn("flower")), "angle", f(f64::INFINITY)))));
     assert!(e.starts_with("florilegium: "), "{e}");
     assert!(ornament_cbor(&orn("flower")).is_ok());
+    let with_ink = |c: &str| enc(&with(with(dec(&orn("flower")), "ink", t(c)), "accent", t(c)));
+    assert_eq!(ornament_cbor(&with_ink("#2456C4")).unwrap(), ornament_cbor(&with_ink("2456C4")).unwrap());
 
     let dr = |name: &str| enc(&map(vec![("name", t(name)), ("size", f(1.0)), ("opts", map(vec![])), ("seed", i(3))]));
     let e = err(draw_cbor(&dr("nope")));

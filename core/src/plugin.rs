@@ -217,7 +217,7 @@ fn page_args(a: &Args) -> R<PageArgs> {
 fn hex(a: &Args, k: &str) -> R<String> {
     let s = a.text(k)?.unwrap_or("");
     if !s.is_empty() { svg::html(s)?; }
-    Ok(s.to_string())
+    Ok(s.strip_prefix('#').unwrap_or(s).to_string())
 }
 
 fn color(a: &Args, k: &str) -> R<Option<Color>> {
