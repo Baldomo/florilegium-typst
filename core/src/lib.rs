@@ -5,6 +5,7 @@ pub mod flora;
 pub mod fmt;
 pub mod geometric;
 pub mod grow;
+pub mod initial;
 pub mod ink;
 pub mod math;
 pub mod tex;

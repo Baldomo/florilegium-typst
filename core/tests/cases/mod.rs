@@ -6,8 +6,11 @@ mod flora;
 mod fmt;
 mod geometric;
 mod grow;
+mod initial;
 mod ink;
 mod math;
+
+pub fn initial_dump() -> florilegium_core::initial::Shapes { initial::dump() }
 
 pub fn run_case(id: &str) -> Result<String, String> {
     match id.split('/').next().unwrap_or("") {
@@ -17,6 +20,7 @@ pub fn run_case(id: &str) -> Result<String, String> {
         "fmt" => fmt::run(id),
         "geometric" => geometric::run(id),
         "grow" => grow::run(id),
+        "initial" => initial::run(id),
         "ink" => ink::run(id),
         "math" => math::run(id),
         _ => Err(format!("unknown case family in id {id:?}")),

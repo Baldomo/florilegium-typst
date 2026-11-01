@@ -21,3 +21,6 @@ panic = "abort"
 
 [profile.test]
 opt-level = 3
+
+[dependencies]
+ttf-parser = { version = "0.25.1", default-features = false, features = ["std"] }

@@ -961,4 +961,57 @@ end, function(id)
   return finish(out)
 end)
 
+-- ---------------------------------------------------------------- initial
+-- cases.lua runs under plain Lua, so luaotfload's reader is replaced by the dump of
+-- tools/oracle/shapes.lua (core/tests/fixtures/lmroman10-bold.shapes).
+local initial_dump = (arg and arg[0] or ""):match("^(.*)/[^/]*$") or "."
+initial_dump = initial_dump .. "/../../core/tests/fixtures/lmroman10-bold.shapes"
+local function read_shapes()
+  local f = assert(io.open(initial_dump, "r"))
+  local shapes, cur = { glyphs = {} }, nil
+  for line in f:lines() do
+    local w = {}
+    for t in line:gmatch("%S+") do w[#w + 1] = t end
+    if w[1] == "units" then shapes.units = tonumber(w[2])
+    elseif w[1] == "glyph" then
+      cur = { unicode = math.tointeger(tonumber(w[2])), segments = {} }
+      if w[3] ~= "nobox" then cur.boundingbox = { tonumber(w[3]), tonumber(w[4]), tonumber(w[5]), tonumber(w[6]) } end
+      if w[#w] == "nosegments" then cur.segments = nil end
+      shapes.glyphs[#shapes.glyphs + 1] = cur
+    elseif w[1] == "end" then cur = nil
+    else
+      local sg = {}
+      for i = 2, #w do sg[#sg + 1] = tonumber(w[i]) end
+      sg[#sg + 1] = w[1]
+      cur.segments[#cur.segments + 1] = sg
+    end
+  end
+  f:close()
+  return shapes
+end
+kpse = { find_file = function(name) return name end }
+fonts = { handlers = { otf = { readers = { loadshapes = function() return read_shapes() end } } } }
+local initial = require("initial")
+
+M.register("initial", function()
+  local ids = {}
+  for _, letter in ipairs({ "A", "M", "Q", "R", "W", "g", "\xC3\x9F" }) do
+    for _, S in ipairs({ "1.4", "2.1" }) do
+      for k = 1, 2 do ids[#ids + 1] = ("initial/%s/S=%s/seed=%d"):format(letter, S, k) end
+    end
+  end
+  ids[#ids + 1] = "initial/\xE2\x82\xAC/S=1.4/seed=1"
+  return ids
+end, function(id)
+  local letter, S, seed = id:match("^initial/(.-)/S=([^/]*)/seed=([^/]*)$")
+  local out = { id }
+  ink.set_transform({ ink.CM, 0, 0, ink.CM, 0, 0 })
+  local r = ink.rng(tonumber(seed))
+  local ok, err = initial.draw(r, tonumber(S), letter)
+  if not ok then return id .. "\nerror " .. err .. "\n" end
+  nums(out, r.u())
+  ink.flush()
+  return finish(out)
+end)
+
 return M

@@ -88,3 +88,22 @@ fn geometric() { check_family("geometric/"); }
 
 #[test]
 fn math() { check_family("math/"); }
+
+#[test]
+fn initial() { check_family("initial/"); }
+
+/// the outlines read with ttf-parser equal what luaotfload's loadshapes reports
+#[test]
+fn shapes() {
+    let bytes = std::fs::read(concat!(env!("CARGO_MANIFEST_DIR"), "/../fonts/lmroman10-bold.otf")).expect("font");
+    let got = florilegium_core::initial::shapes_from_font(&bytes).unwrap();
+    let want = cases::initial_dump();
+    assert_eq!(got.units, want.units);
+    assert_eq!(want.glyphs.len(), 159);
+    let mut bad = vec![];
+    for (u, g) in &want.glyphs {
+        if got.glyphs.get(u) != Some(g) { bad.push(*u) }
+    }
+    bad.sort();
+    assert!(bad.is_empty(), "{} glyphs differ: {:?}", bad.len(), bad);
+}
