@@ -1,0 +1,12 @@
+[package]
+name = "florilegium"
+version = "0.1.0"
+entrypoint = "src/lib.typ"
+authors = ["Kevin Raymond"]
+license = "MIT"
+description = "Procedurally generated Delft-blue floral page margins."
+categories = ["layout"]
+exclude = ["tests", "core", "tools", "Makefile", "mise.toml", ".superpowers"]
+
+[tool.tytanic]
+tests = "tests"

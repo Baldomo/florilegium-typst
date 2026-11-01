@@ -9,6 +9,8 @@ This file is a stub: Task 17 expands it into the package manual.
 
 ### Lengths: Typst's conversion against TeX's `scan_dimen`
 
+(`geometry.to-sp` now reproduces `scan_dimen` exactly for any length that is a short decimal in bp, mm, cm, in or TeX pt, and rounds only otherwise; the table below is what plain rounding would give.)
+
 The core lays the page out in scaled points (sp), the way `svg.lua` and the geometry
 package do, and the Typst layer converts lengths with `round(bp * 72.27/72 * 65536)`.
 TeX's `scan_dimen` (`svg::sp`) truncates the carried remainder instead of rounding it, so
