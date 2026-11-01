@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
 //! The Rust twin of tools/oracle/cases.lua: one module per family.
+mod authored;
 mod figures;
 mod flora;
 mod fmt;
@@ -8,6 +9,7 @@ mod ink;
 
 pub fn run_case(id: &str) -> Result<String, String> {
     match id.split('/').next().unwrap_or("") {
+        "authored" => authored::run(id),
         "figures" => figures::run(id),
         "flora" => flora::run(id),
         "fmt" => fmt::run(id),

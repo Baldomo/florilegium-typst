@@ -670,4 +670,28 @@ end, function(id)
   return finish(out)
 end)
 
+-- ---------------------------------------------------------------- authored
+-- the same geometry; the page writes its own streams and returns nothing
+local authored = require("authored")
+local AUTH_CASES = {}
+for s = 1, 7 do AUTH_CASES[#AUTH_CASES + 1] = { seed = s, name = "plain" } end
+for s = 1, 2 do AUTH_CASES[#AUTH_CASES + 1] = { seed = s, name = "novis", visitors = false } end
+for s = 1, 2 do AUTH_CASES[#AUTH_CASES + 1] = { seed = s, name = "mirror", mirror = true } end
+
+M.register("authored", function()
+  local ids = {}
+  for _, c in ipairs(AUTH_CASES) do ids[#ids + 1] = ("authored/seed=%d/case=%s"):format(c.seed, c.name) end
+  return ids
+end, function(id)
+  local seed, name = id:match("^authored/seed=(%d+)/case=(.+)$")
+  local case
+  for _, c in ipairs(AUTH_CASES) do if c.seed == tonumber(seed) and c.name == name then case = c end end
+  if not case then error("bad authored id: " .. id) end
+  local g = { pw = 21, ph = 29.7, textleft = 6.8, textright = 18.8, ytop = 25.4, ybot = 3.0 }
+  g.colright, g.headrule, g.footy = g.textleft - 0.4, g.ytop + 0.7, 1.9
+  g.seed, g.visitors, g.mirror = case.seed, case.visitors, case.mirror
+  authored.page(g)
+  return finish({})
+end)
+
 return M

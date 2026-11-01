@@ -79,3 +79,6 @@ fn figures() { check_family("figures/"); }
 
 #[test]
 fn grow() { check_family("grow/"); }
+
+#[test]
+fn authored() { check_family("authored/"); }
