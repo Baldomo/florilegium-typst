@@ -469,15 +469,25 @@ pub struct Field {
     pub x: Vec<f64>,
     pub y: Vec<f64>,
     pub free: Vec<f64>,
-    lat: HashMap<i64, usize>,
+    lat: Lat,
     maxfree: f64,
 }
+
+/// lattice keys hash with a multiply, not SipHash (the map is never iterated)
+#[derive(Default)]
+pub struct IntHash(u64);
+impl std::hash::Hasher for IntHash {
+    fn finish(&self) -> u64 { self.0 }
+    fn write(&mut self, b: &[u8]) { for &c in b { self.0 = (self.0 ^ c as u64).wrapping_mul(0x100000001b3) } }
+    fn write_i64(&mut self, i: i64) { self.0 = (i as u64).wrapping_mul(0x9E3779B97F4A7C15) }
+}
+type Lat = HashMap<i64, usize, std::hash::BuildHasherDefault<IntHash>>;
 
 fn key(ix: i64, iy: i64) -> i64 { ix * 100000 + iy }
 
 pub fn field(rects: &[Rect]) -> Field {
     let (mut gx, mut gy, mut free) = (vec![], vec![], vec![]);
-    let mut lat = HashMap::new();
+    let mut lat = Lat::default();
     for r in rects {
         for ix in (r[0] / GRID).floor() as i64..=(r[2] / GRID).floor() as i64 {
             for iy in (r[1] / GRID).floor() as i64..=(r[3] / GRID).floor() as i64 {

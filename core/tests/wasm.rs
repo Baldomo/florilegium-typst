@@ -43,7 +43,7 @@ fn wasm_parity() {
         println!("src/florilegium.wasm is missing (run `make wasm`): wasm parity skipped");
         return;
     };
-    if let Ok(dir) = std::env::var("FLO_DUMP") { std::fs::write(format!("{dir}/args.cbor"), enc(&page_args(1))).unwrap() }
+    if let Ok(dir) = std::env::var("FLO_DUMP") { std::fs::write(format!("{dir}/args.cbor"), enc(&page_args(1))).unwrap(); std::fs::write(format!("{dir}/args7.cbor"), enc(&page_args(7))).unwrap() }
     let mut total = 0;
     for seed in 1..=8 {
         let args = enc(&page_args(seed));

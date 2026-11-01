@@ -9,25 +9,49 @@ pub fn fixed(out: &mut String, x: f64, prec: usize) {
         return;
     }
     if prec <= 15 {
-        let y = x * 10f64.powi(prec as i32);
+        let y = x * [1.0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15][prec];
         let ay = y.abs();
         if ay < 1073741824.0 && (ay - ay.floor() - 0.5).abs() > 1e-6 {
             let digits = ay.round() as u64;
             if x.is_sign_negative() {
                 out.push('-');
             }
-            let s = digits.to_string();
-            if prec == 0 {
-                out.push_str(&s);
-            } else {
-                let padded = format!("{s:0>width$}", width = prec + 1);
-                let (int, frac) = padded.split_at(padded.len() - prec);
-                let _ = write!(out, "{int}.{frac}");
+            const P10: [u64; 16] = [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000,
+                10000000000, 100000000000, 1000000000000, 10000000000000, 100000000000000, 1000000000000000];
+            let p10 = P10[prec];
+            push_u64(out, digits / p10);
+            if prec > 0 {
+                out.push('.');
+                let mut f = digits % p10;
+                let mut buf = [b'0'; 16];
+                for i in (0..prec).rev() {
+                    buf[i] = b'0' + (f % 10) as u8;
+                    f /= 10;
+                }
+                push_ascii(out, &buf[..prec]);
             }
             return;
         }
     }
     let _ = write!(out, "{:.*}", prec, x);
+}
+
+fn push_u64(out: &mut String, mut n: u64) {
+    let mut buf = [0u8; 20];
+    let mut i = 20;
+    loop {
+        i -= 1;
+        buf[i] = b'0' + (n % 10) as u8;
+        n /= 10;
+        if n == 0 { break }
+    }
+    push_ascii(out, &buf[i..]);
+}
+
+fn push_ascii(out: &mut String, b: &[u8]) {
+    debug_assert!(b.is_ascii());
+    // SAFETY: only ASCII digits are appended
+    unsafe { out.as_mut_vec().extend_from_slice(b) }
 }
 
 fn non_finite(out: &mut String, x: f64) {

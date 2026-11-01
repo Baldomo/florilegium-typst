@@ -149,7 +149,7 @@ struct State {
     cur: i32,
     tag: Option<Tag>,
     recording: bool,
-    path: Vec<String>,
+    path: String,
 }
 
 impl State {
@@ -170,7 +170,7 @@ impl State {
             cur: 5,
             tag: None,
             recording: false,
-            path: vec![],
+            path: String::new(),
         };
         s.set_ink(0x24 as f64 / 255.0, 0x56 as f64 / 255.0, 0xC4 as f64 / 255.0);
         s
@@ -206,9 +206,7 @@ impl State {
     }
 
     fn take(&mut self) -> String {
-        let s = self.path.join(" ");
-        self.path.clear();
-        s
+        std::mem::take(&mut self.path)
     }
 }
 
@@ -389,30 +387,43 @@ fn gs(op: f64, mult: bool) -> Option<String> {
 }
 
 // 0.1 bp (0.035 mm) is finer than any printer resolves
-fn pt(t: &Tf, x: f64, y: f64) -> String {
-    let mut o = String::new();
-    fixed(&mut o, t[0] * x + t[2] * y + t[4], 1);
+fn pt_into(o: &mut String, t: &Tf, x: f64, y: f64) {
+    fixed(o, t[0] * x + t[2] * y + t[4], 1);
     o.push(' ');
-    fixed(&mut o, t[1] * x + t[3] * y + t[5], 1);
-    o
+    fixed(o, t[1] * x + t[3] * y + t[5], 1);
 }
 
-fn add_path(s: String) { with(|st| st.path.push(s)) }
+fn sep(p: &mut String) { if !p.is_empty() { p.push(' ') } }
 
-pub fn moveto(x: f64, y: f64) { with(|s| { let p = pt(&s.t, x, y) + " m"; s.path.push(p) }) }
-pub fn lineto(x: f64, y: f64) { with(|s| { let p = pt(&s.t, x, y) + " l"; s.path.push(p) }) }
+fn op_pt(p: &mut String, t: &Tf, x: f64, y: f64, op: &str) {
+    sep(p);
+    pt_into(p, t, x, y);
+    p.push(' ');
+    p.push_str(op);
+}
+
+fn add_path(s: &str) { with(|st| { sep(&mut st.path); st.path.push_str(s) }) }
+
+pub fn moveto(x: f64, y: f64) { with(|s| op_pt(&mut s.path, &s.t, x, y, "m")) }
+pub fn lineto(x: f64, y: f64) { with(|s| op_pt(&mut s.path, &s.t, x, y, "l")) }
+fn curve_pts(p: &mut String, t: &Tf, x1: f64, y1: f64, x2: f64, y2: f64, x3: f64, y3: f64) {
+    sep(p);
+    pt_into(p, t, x1, y1);
+    p.push(' ');
+    pt_into(p, t, x2, y2);
+    p.push(' ');
+    pt_into(p, t, x3, y3);
+    p.push_str(" c");
+}
 pub fn curveto(x1: f64, y1: f64, x2: f64, y2: f64, x3: f64, y3: f64) {
-    with(|s| {
-        let p = format!("{} {} {} c", pt(&s.t, x1, y1), pt(&s.t, x2, y2), pt(&s.t, x3, y3));
-        s.path.push(p)
-    })
+    with(|s| curve_pts(&mut s.path, &s.t, x1, y1, x2, y2, x3, y3))
 }
-pub fn close() { add_path("h".into()) }
+pub fn close() { add_path("h") }
 pub fn poly(pts: &[Pt], closed: bool) {
     with(|s| {
-        s.path.push(pt(&s.t, pts[0][0], pts[0][1]) + " m");
-        for p in &pts[1..] { let l = pt(&s.t, p[0], p[1]) + " l"; s.path.push(l) }
-        if closed { s.path.push("h".into()) }
+        op_pt(&mut s.path, &s.t, pts[0][0], pts[0][1], "m");
+        for p in &pts[1..] { op_pt(&mut s.path, &s.t, p[0], p[1], "l") }
+        if closed { s.path.push_str(" h") }
     })
 }
 pub fn smooth(pts: &[Pt], closed: bool, tension: Option<f64>) {
@@ -424,40 +435,42 @@ pub fn smooth(pts: &[Pt], closed: bool, tension: Option<f64>) {
         else { pts[(i.min(n as i64).max(1) - 1) as usize] }
     };
     with(|s| {
-        s.path.push(pt(&s.t, pts[0][0], pts[0][1]) + " m");
+        op_pt(&mut s.path, &s.t, pts[0][0], pts[0][1], "m");
         let last = if closed { n } else { n - 1 } as i64;
         for i in 1..=last {
             let (p0, p1, p2, p3) = (at(i - 1), at(i), at(i + 1), at(i + 2));
-            let c = format!("{} {} {} c",
-                pt(&s.t, p1[0] + (p2[0] - p0[0]) * k, p1[1] + (p2[1] - p0[1]) * k),
-                pt(&s.t, p2[0] - (p3[0] - p1[0]) * k, p2[1] - (p3[1] - p1[1]) * k),
-                pt(&s.t, p2[0], p2[1]));
-            s.path.push(c);
+            curve_pts(&mut s.path, &s.t,
+                p1[0] + (p2[0] - p0[0]) * k, p1[1] + (p2[1] - p0[1]) * k,
+                p2[0] - (p3[0] - p1[0]) * k, p2[1] - (p3[1] - p1[1]) * k,
+                p2[0], p2[1]);
         }
-        if closed { s.path.push("h".into()) }
+        if closed { s.path.push_str(" h") }
     })
 }
 pub fn circle(x: f64, y: f64, r: f64) {
     let k = 0.5523 * r;
     with(|s| {
-        let t = &s.t;
-        let c = format!("{} m {} {} {} c {} {} {} c {} {} {} c {} {} {} c h",
-            pt(t, x + r, y), pt(t, x + r, y + k), pt(t, x + k, y + r), pt(t, x, y + r),
-            pt(t, x - k, y + r), pt(t, x - r, y + k), pt(t, x - r, y),
-            pt(t, x - r, y - k), pt(t, x - k, y - r), pt(t, x, y - r),
-            pt(t, x + k, y - r), pt(t, x + r, y - k), pt(t, x + r, y));
-        s.path.push(c);
+        let t = s.t;
+        let p = &mut s.path;
+        op_pt(p, &t, x + r, y, "m");
+        curve_pts(p, &t, x + r, y + k, x + k, y + r, x, y + r);
+        curve_pts(p, &t, x - k, y + r, x - r, y + k, x - r, y);
+        curve_pts(p, &t, x - r, y - k, x - k, y - r, x, y - r);
+        curve_pts(p, &t, x + k, y - r, x + r, y - k, x + r, y);
+        p.push_str(" h");
     })
 }
 
-fn rgb(c: Color, stroke: bool) -> String {
-    let mut o = String::new();
+fn rgb_into(o: &mut String, c: Color, stroke: bool) {
     for (i, v) in c.iter().enumerate() {
         if i > 0 { o.push(' ') }
-        fixed(&mut o, *v, 3);
+        fixed(o, *v, 3);
     }
     o.push_str(if stroke { " RG" } else { " rg" });
-    o
+}
+
+fn gs_prefix(o: &mut String, g: &Option<String>) {
+    if let Some(g) = g { o.push_str("q /"); o.push_str(g); o.push_str(" gs ") }
 }
 
 /// paint the current path. opacity < 1 or mult=true wraps it in its own graphics state
@@ -465,27 +478,30 @@ pub fn fill(c: Color, op: Option<f64>, mult: bool) {
     let g = gs(op.unwrap_or(1.0), mult);
     with(|s| {
         let p = s.take();
-        match g {
-            Some(g) => s.put(format!("q /{} gs {} {} f Q", g, rgb(c, false), p)),
-            None => s.put(format!("{} {} f", rgb(c, false), p)),
-        }
+        let mut o = String::with_capacity(p.len() + 48);
+        gs_prefix(&mut o, &g);
+        rgb_into(&mut o, c, false);
+        o.push(' ');
+        o.push_str(&p);
+        o.push_str(if g.is_some() { " f Q" } else { " f" });
+        s.put(o)
     })
 }
 /// dash: a PDF dash array as the Lua takes it, a string such as "[2 2] 0"
 pub fn stroke(c: Color, w: f64, op: Option<f64>, mult: bool, dash: Option<&str>) {
     let g = gs(op.unwrap_or(1.0), mult);
     with(|s| {
-        let mut st = rgb(c, true);
-        st.push(' ');
-        fixed(&mut st, w, 2);
-        st.push_str(" w ");
-        if let Some(d) = dash { st.push_str(d); st.push_str(" d ") }
-        st.push_str(&s.take());
-        st.push_str(" S");
-        match g {
-            Some(g) => s.put(format!("q /{} gs {} Q", g, st)),
-            None => s.put(format!("q {} Q", st)),
-        }
+        let p = s.take();
+        let mut o = String::with_capacity(p.len() + 64);
+        if g.is_some() { gs_prefix(&mut o, &g) } else { o.push_str("q ") }
+        rgb_into(&mut o, c, true);
+        o.push(' ');
+        fixed(&mut o, w, 2);
+        o.push_str(" w ");
+        if let Some(d) = dash { o.push_str(d); o.push_str(" d ") }
+        o.push_str(&p);
+        o.push_str(" S Q");
+        s.put(o)
     })
 }
 /// clip to the current path until the matching unclip()
@@ -603,13 +619,13 @@ pub fn taper(x0: f64, y0: f64, x1: f64, y1: f64, x2: f64, y2: f64, x3: f64, y3: 
     let (n3x, n3y) = nrm(x3 - x2, y3 - y2);
     let (h0, h1, h2, h3) = (w0 / 2.0, (2.0 * w0 + w1) / 6.0, (w0 + 2.0 * w1) / 6.0, w1 / 2.0);
     with(|s| {
-        let t = &s.t;
-        let c = format!("{} m {} {} {} c {} l {} {} {} c h",
-            pt(t, x0 + n0x * h0, y0 + n0y * h0),
-            pt(t, x1 + n1x * h1, y1 + n1y * h1), pt(t, x2 + n2x * h2, y2 + n2y * h2), pt(t, x3 + n3x * h3, y3 + n3y * h3),
-            pt(t, x3 - n3x * h3, y3 - n3y * h3),
-            pt(t, x2 - n2x * h2, y2 - n2y * h2), pt(t, x1 - n1x * h1, y1 - n1y * h1), pt(t, x0 - n0x * h0, y0 - n0y * h0));
-        s.path.push(c);
+        let t = s.t;
+        let p = &mut s.path;
+        op_pt(p, &t, x0 + n0x * h0, y0 + n0y * h0, "m");
+        curve_pts(p, &t, x1 + n1x * h1, y1 + n1y * h1, x2 + n2x * h2, y2 + n2y * h2, x3 + n3x * h3, y3 + n3y * h3);
+        op_pt(p, &t, x3 - n3x * h3, y3 - n3y * h3, "l");
+        curve_pts(p, &t, x2 - n2x * h2, y2 - n2y * h2, x1 - n1x * h1, y1 - n1y * h1, x0 - n0x * h0, y0 - n0y * h0);
+        p.push_str(" h");
     })
 }
 

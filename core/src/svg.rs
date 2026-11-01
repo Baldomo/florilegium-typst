@@ -112,28 +112,36 @@ pub fn html(h: &str) -> Result<Color, String> {
 
 // ---------------------------------------------------------------- PDF -> SVG
 #[derive(Clone)]
-struct St { fill: String, stroke: String, w: String, dash: Option<String>, op: f64, mult: bool }
+struct St<'a> { fill: [u8; 7], stroke: [u8; 7], w: &'a str, dash: Option<String>, op: f64, mult: bool }
 
-enum A { S(String), Arr(Vec<String>) }
+enum A<'a> { S(&'a str), Arr(Vec<&'a str>) }
 
-fn hex(r: &str, g: &str, b: &str) -> Result<String, String> {
-    let c = |v: &str| -> Result<i64, String> {
+fn hex(r: &str, g: &str, b: &str) -> Result<[u8; 7], String> {
+    let c = |v: &str| -> Result<u8, String> {
         let x: f64 = v.parse().map_err(|_| format!("florilegium: svg.lua: bad number '{v}'"))?;
-        Ok(((x * 255.0 + 0.5).floor() as i64).clamp(0, 255))
+        Ok(((x * 255.0 + 0.5).floor() as i64).clamp(0, 255) as u8)
     };
-    Ok(format!("#{:02x}{:02x}{:02x}", c(r)?, c(g)?, c(b)?))
+    const H: &[u8; 16] = b"0123456789abcdef";
+    let mut o = *b"#000000";
+    for (k, v) in [c(r)?, c(g)?, c(b)?].into_iter().enumerate() {
+        o[1 + 2 * k] = H[(v >> 4) as usize];
+        o[2 + 2 * k] = H[(v & 15) as usize];
+    }
+    Ok(o)
 }
 
-fn num(t: &str) -> String { t.strip_suffix(".0").unwrap_or(t).to_string() }
+fn num(t: &str) -> &str { t.strip_suffix(".0").unwrap_or(t) }
 
-/// ink's content stream as SVG elements appended to `out`; `id` prefixes the clip ids
+fn color(c: &[u8; 7]) -> &str { std::str::from_utf8(c).unwrap() }
+
+// ---------------------------------------------------------------- the literals
 pub fn translate(stream: &str, out: &mut Vec<String>, id: &str) -> Result<(), String> {
-    let mut st = St { fill: "#000000".into(), stroke: "#000000".into(), w: "1".into(), dash: None, op: 1.0, mult: false };
+    let mut st = St { fill: *b"#000000", stroke: *b"#000000", w: "1", dash: None, op: 1.0, mult: false };
     let mut stack: Vec<(St, usize)> = vec![];
     let mut open = 0usize;
     let mut args: Vec<A> = vec![];
-    let mut d: Vec<String> = vec![];
-    let mut arr: Option<Vec<String>> = None;
+    let mut d = String::new();
+    let mut arr: Option<Vec<&str>> = None;
     let mut nclip = 0;
     let mut clip = false;
     let bad = || "florilegium: svg.lua: malformed content stream".to_string();
@@ -145,24 +153,44 @@ pub fn translate(stream: &str, out: &mut Vec<String>, id: &str) -> Result<(), St
             if !v.is_empty() { arr.as_mut().unwrap().push(num(v)) }
             if closed { args.push(A::Arr(arr.take().unwrap())) }
         } else if c.is_ascii_digit() || c == b'-' || c == b'.' || c == b'/' {
-            args.push(A::S(t.to_string()));
+            args.push(A::S(t));
         } else {
             let n = args.len();
             let s = |k: usize| -> Result<&str, String> {
-                match n.checked_sub(k).and_then(|i| args.get(i)) { Some(A::S(s)) => Ok(s.as_str()), _ => Err(bad()) }
+                match n.checked_sub(k).and_then(|i| args.get(i)) { Some(A::S(s)) => Ok(s), _ => Err(bad()) }
             };
             match t {
-                "m" | "l" => d.push(format!("{}{} {}", if t == "m" { "M" } else { "L" }, num(s(2)?), num(s(1)?))),
-                "c" => d.push(format!("C{} {} {} {} {} {}", num(s(6)?), num(s(5)?), num(s(4)?), num(s(3)?), num(s(2)?), num(s(1)?))),
-                "h" => d.push("Z".into()),
+                "m" | "l" => {
+                    d.push(if t == "m" { 'M' } else { 'L' });
+                    d.push_str(num(s(2)?));
+                    d.push(' ');
+                    d.push_str(num(s(1)?));
+                }
+                "c" => {
+                    d.push('C');
+                    for k in (1..=6).rev() {
+                        d.push_str(num(s(k)?));
+                        if k > 1 { d.push(' ') }
+                    }
+                }
+                "h" => d.push('Z'),
                 "f" | "S" => {
-                    let mut a = format!("<path d=\"{}\"", d.concat());
+                    let mut a = String::with_capacity(d.len() + 120);
+                    a.push_str("<path d=\"");
+                    a.push_str(&d);
+                    a.push('"');
                     if t == "S" {
-                        a.push_str(&format!(" fill=\"none\" stroke=\"{}\" stroke-width=\"{}\"", st.stroke, st.w));
-                        if let Some(dash) = &st.dash { a.push_str(&format!(" stroke-dasharray=\"{dash}\"")) }
+                        a.push_str(" fill=\"none\" stroke=\"");
+                        a.push_str(color(&st.stroke));
+                        a.push_str("\" stroke-width=\"");
+                        a.push_str(st.w);
+                        a.push('"');
+                        if let Some(dash) = &st.dash { a.push_str(" stroke-dasharray=\""); a.push_str(dash); a.push('"') }
                         if st.op < 1.0 { a.push_str(" stroke-opacity=\""); fmt::g(&mut a, st.op); a.push('"') }
                     } else {
-                        a.push_str(&format!(" fill=\"{}\"", st.fill));
+                        a.push_str(" fill=\"");
+                        a.push_str(color(&st.fill));
+                        a.push('"');
                         if st.op < 1.0 { a.push_str(" fill-opacity=\""); fmt::g(&mut a, st.op); a.push('"') }
                     }
                     if st.mult { a.push_str(" style=\"mix-blend-mode:multiply\"") }
@@ -175,7 +203,7 @@ pub fn translate(stream: &str, out: &mut Vec<String>, id: &str) -> Result<(), St
                     if clip {
                         nclip += 1;
                         let cid = format!("{id}c{nclip}");
-                        out.push(format!("<clipPath id=\"{cid}\"><path d=\"{}\"/></clipPath><g clip-path=\"url(#{cid})\">", d.concat()));
+                        out.push(format!("<clipPath id=\"{cid}\"><path d=\"{d}\"/></clipPath><g clip-path=\"url(#{cid})\">"));
                         open += 1;
                         clip = false;
                     }
