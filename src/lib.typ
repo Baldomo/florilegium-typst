@@ -3,6 +3,8 @@
 
 #import "garden.typ" as _garden
 #import "marks.typ" as _marks
+#import "core.typ" as _core
+#import "geometry.typ" as _geometry
 
 /// The template: `#show: florilegium.with(..)`. It sets the page's margins, header and
 /// footer distances and `page.background`, which it owns: a background set by the user
@@ -63,6 +65,7 @@
     }
     it
   }
+  _garden.cfg-state.update(cfg)
   body
 }
 
@@ -71,3 +74,66 @@
 #let age = _marks.age
 #let frame = _marks.frame
 #let textend = _marks.textend
+
+#let _ornaments = counter("florilegium-ornament")
+#let _draws = counter("florilegium-draw")
+
+// The template's settings at this location (none outside the template) and the theme in
+// effect on this page. Needs a context.
+#let _setting(ink, accent, theme) = {
+  let cfg = _garden.cfg-state.get()
+  let hex(c) = _garden._hex(c).trim("#", at: start)
+  let pick(v, key) = if v != none { hex(v) } else if cfg != none { hex(cfg.at(key)) } else { "" }
+  (
+    ink: pick(ink, "ink"), accent: pick(accent, "accent"),
+    theme: if theme != none { theme } else if cfg != none { _marks.effective(here().page(), cfg).theme } else { none },
+  )
+}
+
+#let _svg(r, dx, dy) = if r.width == 0 or r.height == 0 { none } else {
+  place(top + left, dx: dx - r.dx * 1pt, dy: dy - r.dy * 1pt,
+    image(r.svg, format: "svg", width: r.width * 1pt, height: r.height * 1pt))
+}
+
+/// One primitive in a box of side `size` on the baseline, like a letter (depth .15 size).
+///
+/// - name: a primitive of the theme in effect (flora's: leaf, flower, bee, ..).
+/// - seed: auto (the k-th ornament of the document always looks the same) or an integer;
+///   "random" is not supported: Typst documents are deterministic.
+#let ornament(name, size: 1em, ink: none, accent: none, angle: 0deg, seed: auto) = {
+  if seed == "random" {
+    panic("florilegium: seed: \"random\" is not supported in Typst; the build is deterministic, give an integer seed")
+  }
+  _ornaments.step()
+  context {
+    let s = measure(box(width: size)).width
+    let st = _setting(ink, accent, none)
+    let r = _core.ornament((
+      name: name, size: _geometry.to-sp(s), angle: angle.deg(),
+      count: _ornaments.get().first(), seed: if seed == auto { none } else { seed },
+      ink: st.ink, accent: st.accent, theme: st.theme,
+    ))
+    box(width: s, height: .85 * s, baseline: .15 * s, _svg(r, 0pt, .85 * s))
+  }
+}
+
+/// A primitive drawn at the current point: a zero-size box whose position is the
+/// primitive's origin. `size` is its length; `opts` are the primitive's options (tone, w,
+/// bend, side, depth, ..). Without `seed` the drawing is determined by the template seed
+/// (1 if none), the physical page and the count of draws: seed * 7919 + page * 131 + k * 977.
+#let draw(name, size, ink: none, accent: none, theme: none, seed: auto, ..opts) = {
+  _draws.step()
+  context {
+    let st = _setting(ink, accent, theme)
+    let cfg = _garden.cfg-state.get()
+    let seed = if seed != auto { seed } else {
+      let base = if cfg != none and cfg.seed != none { cfg.seed } else { 1 }
+      base * 7919 + here().page() * 131 + _draws.get().first() * 977
+    }
+    let r = _core.draw((
+      name: name, size: size.to-absolute() / 1cm, opts: opts.named(), seed: seed,
+      ink: st.ink, accent: st.accent, theme: st.theme,
+    ))
+    box(width: 0pt, height: 0pt, _svg(r, 0pt, 0pt))
+  }
+}

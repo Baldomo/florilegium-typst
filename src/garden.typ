@@ -37,6 +37,9 @@
   )
 }
 
+/// The template's settings, readable where an ornament or primitive is drawn.
+#let cfg-state = state("florilegium-cfg", none)
+
 #let _hex(c) = c.rgb().to-hex().slice(0, 7)
 
 /// The plugin's `page` result for the page being laid out. Needs a context. The margins
