@@ -5,6 +5,7 @@
 #import "marks.typ" as _marks
 #import "core.typ" as _core
 #import "geometry.typ" as _geometry
+#import "@preview/droplet:0.3.1": dropcap
 
 /// The template: `#show: florilegium.with(..)`. It sets the page's margins, header and
 /// footer distances and `page.background`, which it owns: a background set by the user
@@ -136,4 +137,50 @@
     ))
     box(width: 0pt, height: 0pt, _svg(r, 0pt, 0pt))
   }
+}
+
+#let _initials = counter("florilegium-initial")
+#let _initial-font = state("florilegium-initial-font", auto)
+#let _bundled-font = read("../fonts/lmroman10-bold.otf", encoding: none)
+
+/// Sets the initials' font for the rest of the document: the bytes of an OpenType/TrueType
+/// file, e.g. `read("my.otf", encoding: none)`, or `auto` for the bundled Latin Modern
+/// Roman Bold. Overrides the template's `initial-font`.
+#let initial-font(font) = _initial-font.update(font)
+
+// The tile of an initial: a box of side `lines` baselines (`S`), the letter drawn in it,
+// and the letter itself invisibly over it, so that it can be copied.
+#let _initial-tile(letter, lines: 4, font: auto, seed: auto, ink: none, accent: none) = {
+  if seed == auto { _initials.step() }
+  context {
+    let cap = measure(text("H")).height
+    let side = (lines - 1) * (cap + par.leading.to-absolute()) + cap
+    let cfg = _garden.cfg-state.get()
+    let font = if font != auto { font } else if _initial-font.get() != auto { _initial-font.get() } else if cfg != none and cfg.initial-font != auto { cfg.initial-font } else { _bundled-font }
+    let st = _setting(ink, accent, none)
+    let r = _core.initial((
+      letter: letter, side: _geometry.to-sp(side), font: font,
+      seed: if seed == auto { _initials.get().first() } else { seed } * 7919 + 5003,
+      ink: st.ink, accent: st.accent,
+    ))
+    box(width: side, height: side, {
+      _svg(r, 0pt, side)
+      place(top + left, text(fill: rgb(0, 0, 0, 0), size: side, letter))
+    })
+  }
+}
+
+/// A paragraph with a decorated initial: a procedurally drawn tile of `lines` lines in
+/// the Delft-blue style, holding `letter`, with `body` (the rest of the paragraph) beside it.
+///
+/// - lines: the height of the initial in lines of the paragraph.
+/// - font: `auto` (the document's `initial-font`, else Latin Modern Roman Bold) or the
+///   bytes of a font file.
+/// - seed: auto (the k-th initial of the document always looks the same) or an integer.
+#let initial(lines: 4, font: auto, seed: auto, ink: none, accent: none, letter, body) = {
+  dropcap(
+    height: lines, gap: 0.6em,
+    _initial-tile(letter, lines: lines, font: font, seed: seed, ink: ink, accent: accent),
+    body,
+  )
 }
