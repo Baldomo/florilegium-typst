@@ -1066,7 +1066,9 @@ for _, c in ipairs({ "authored/seed=3", "page=3", "seed=2/season=spring", "seed=
     "seed=2/theme=geometric", "seed=2/theme=math", "seed=2/density=0.4", "seed=2/density=0.05", "seed=2/intensity=0.5",
     "seed=2/intensity=0", "seed=2/novisitors", "seed=2/twoside/page=2", "seed=2/textend=120mm", "seed=2/nohead",
     "seed=2/ink=5B2A1F/accent=2F6B3A", "seed=2/paper=letter", "seed=2/paper=a5", "seed=2/paper=160x240",
-    "seed=2/left=50mm/right=30mm", "seed=2/background=FFFDF5" }) do
+    "seed=2/left=50mm/right=30mm", "seed=2/background=FFFDF5", "seed=2/bleed=3mm", "seed=2/bleed=0",
+    "seed=2/twoside/page=2/bleed=0.125in", "seed=2/theme=geometric/bleed=5mm", "seed=2/textend=120mm/bleed=3mm",
+    "authored/seed=3/bleed=3mm", "seed=2/theme=math/bleed=3mm" }) do
   SVG_CASES[#SVG_CASES + 1] = c
 end
 local CAPTION_CASES = { "seed=1/theme=math", "seed=3/theme=math", "seed=2/theme=math/twoside/page=2",
@@ -1077,9 +1079,10 @@ local FRAME_OPTS = {
   ["geometric-autumn-mirrored"] = { "theme=geometric", "season=0.95", "twoside", "page=2" },
   ["density-0.4"] = { "density=0.4" }, ["density-0.05"] = { "density=0.05" }, math = { "theme=math" },
   ["math-mirrored-density-0.3"] = { "theme=math", "twoside", "page=2", "density=0.3" },
+  bleed = { "bleed=3mm" },
 }
 local FRAME_ORDER = { "summer", "spring", "autumn", "geometric", "geometric-autumn-mirrored", "density-0.4",
-  "density-0.05", "math", "math-mirrored-density-0.3" }
+  "density-0.05", "math", "math-mirrored-density-0.3", "bleed" }
 
 local ORN_NAMES = { "leaf", "leaflet", "petal", "bud", "bell", "sprig", "cyme", "umbel", "tendril", "flower", "blossom",
   "floret", "lily", "seedhead", "butterfly", "bee", "snail", "bird", "sparkle", "rosette", "hedera" }

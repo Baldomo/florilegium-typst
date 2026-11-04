@@ -312,6 +312,8 @@ pub struct PageArgs {
     pub nohead: bool,
     pub id: Option<String>,
     pub background: Option<String>,
+    /// how far the grown garden may run past the paper's edges, in cm; the SVG grows by as much
+    pub bleed: Option<f64>,
 }
 
 impl Default for PageArgs {
@@ -319,7 +321,7 @@ impl Default for PageArgs {
         PageArgs {
             page: 1, twoside: false, dimens: Dimens::default(), seed: None, mode: Mode::Grown, theme: None, season: None,
             marks: vec![], density: 1.0, intensity: 1.0, visitors: true, ink: "2456C4".into(), accent: "B4662F".into(),
-            spill: None, frame: None, nohead: false, id: None, background: None,
+            spill: None, frame: None, nohead: false, id: None, background: None, bleed: None,
         }
     }
 }
@@ -420,6 +422,7 @@ fn garden_inner(a: &PageArgs) -> Result<Garden, String> {
             g.age = a.season;
             if let Some(y) = a.spill { g.spill = 1; g.spilly = y }
             if a.density < 1.0 { g.density = Some(f64::max(0.03, a.density)) }
+            g.bleed = a.bleed;
             match &a.frame {
                 Some(f) => (grown_frame(&mut g, f)?, None),
                 None => {

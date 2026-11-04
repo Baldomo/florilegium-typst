@@ -87,6 +87,8 @@ pub struct G {
     pub theme: Option<String>,
     pub density: Option<f64>,
     pub anim: bool,
+    /// how far past the paper's edges the safety clip reaches, in cm (florilegium-svg.lua's bleed)
+    pub bleed: Option<f64>,
 }
 
 pub struct Caption {
@@ -1452,8 +1454,14 @@ pub fn page(g: &G) -> Result<PageResult, String> {
     ink::tag(None);
     ink::layer(0);
     for (i, r) in rects.iter().enumerate() {
-        let rx = r[2] + if i == 0 { 0.25 } else { 0.3 };
-        ink::poly(&[[r[0] - 0.25, r[1] - 0.3], [rx, r[1] - 0.3], [rx, r[3] + 0.3], [r[0] - 0.25, r[3] + 0.3]], true);
+        let (mut x1, mut y1, mut x2, mut y2) = (r[0] - 0.25, r[1] - 0.3, r[2] + if i == 0 { 0.25 } else { 0.3 }, r[3] + 0.3);
+        if let Some(b) = g.bleed {
+            if r[0] < 1.0 { x1 = -b }
+            if r[1] < 1.0 { y1 = -b }
+            if r[2] > g.pw - 1.0 { x2 = g.pw + b }
+            if r[3] > g.ph - 1.0 { y2 = g.ph + b }
+        }
+        ink::poly(&[[x1, y1], [x2, y1], [x2, y2], [x1, y2]], true);
     }
     ink::clip();
     ink::layer(99);

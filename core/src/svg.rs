@@ -314,13 +314,25 @@ pub fn page(a: &PageArgs) -> Result<PageOut, String> {
     let id = a.id.clone().unwrap_or_else(|| format!("flo{}-", a.seed.unwrap_or(0)));
     let mut out: Vec<String> = vec![];
     let mut head = String::from("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"");
-    f2(&mut head, g.pw * 10.0);
+    let b = a.bleed.unwrap_or(0.0);
+    f2(&mut head, (g.pw + 2.0 * b) * 10.0);
     head.push_str("mm\" height=\"");
-    f2(&mut head, g.ph * 10.0);
-    head.push_str("mm\" viewBox=\"0 0 ");
-    f2(&mut head, w);
-    head.push(' ');
-    f2(&mut head, h);
+    f2(&mut head, (g.ph + 2.0 * b) * 10.0);
+    head.push_str("mm\" viewBox=\"");
+    if a.bleed.is_some() {
+        f2(&mut head, -b * CM);
+        head.push(' ');
+        f2(&mut head, -b * CM);
+        head.push(' ');
+        f2(&mut head, w + 2.0 * b * CM);
+        head.push(' ');
+        f2(&mut head, h + 2.0 * b * CM);
+    } else {
+        head.push_str("0 0 ");
+        f2(&mut head, w);
+        head.push(' ');
+        f2(&mut head, h);
+    }
     head.push_str("\">");
     out.push(head);
     if let Some(bg) = &a.background {
@@ -362,6 +374,8 @@ pub const USAGE: &str = "usage: florilegium-svg [options] > page.svg
   --nohead          leave out the head rule and its ivy leaf
   --authored        the hand-placed composition (A4, 68 mm left margin)
   --background RRGGBB   paint the paper (default: transparent)
+  --bleed LEN       let the garden run LEN past the paper's edges, uncut; the SVG grows by LEN
+                    on every side (for a garden set on a page of its own, as in an e-book)
   -o FILE           write to FILE instead of standard output
 A length is a number and a unit (mm, cm, in, pt, bp); a bare number is mm.
 ";
@@ -375,7 +389,8 @@ fn tonumber(s: &str) -> Option<f64> { s.trim().parse::<f64>().ok() }
 pub fn options(argv: &[String]) -> Result<Cli, String> {
     let flags = ["twoside", "novisitors", "nohead", "authored"];
     let values = ["seed", "page", "paper", "left", "right", "top", "bottom", "headsep", "headheight", "footskip", "textend",
-        "season", "theme", "density", "intensity", "ink", "accent", "background"];
+        "season", "theme", "density", "intensity", "ink", "accent", "background",
+        "bleed"];
     let mut o: std::collections::HashMap<&str, String> = Default::default();
     let (mut twoside, mut visitors, mut head, mut authored) = (false, true, true, false);
     let (mut file, mut help) = (None, false);
@@ -433,6 +448,7 @@ pub fn options(argv: &[String]) -> Result<Cli, String> {
     if let Some(s) = o.get("ink") { pg.ink = s.clone() }
     if let Some(s) = o.get("accent") { pg.accent = s.clone() }
     pg.background = o.get("background").cloned();
+    if let Some(b) = o.get("bleed") { pg.bleed = Some(sp(b)? as f64 * 2.54 / (72.27 * 65536.0)) }
     if let Some(t) = o.get("textend") {
         let g = glue::geometry(&pg.dimens, pg.page, pg.twoside);
         pg.spill = Some(g.ytop - (sp(t)? as f64 * 2.54) / (72.27 * 65536.0));

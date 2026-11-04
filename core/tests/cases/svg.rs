@@ -33,6 +33,7 @@ fn frame_opts(name: &str) -> Option<&'static [&'static str]> {
         "density-0.05" => &["density=0.05"],
         "math" => &["theme=math"],
         "math-mirrored-density-0.3" => &["theme=math", "twoside", "page=2", "density=0.3"],
+        "bleed" => &["bleed=3mm"],
         _ => return None,
     })
 }
