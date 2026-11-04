@@ -28,7 +28,7 @@ pub struct Dimens {
 }
 
 impl Dimens {
-    /// svg.lua's formulas: the inner margin on odd pages is `left`; on even pages of a
+    /// florilegium-svg.lua's formulas: the inner margin on odd pages is `left`; on even pages of a
     /// two-sided document the text moves over by the difference
     pub fn from_margins(pw: i64, ph: i64, left: i64, right: i64, top: i64, bottom: i64,
                         headheight: i64, headsep: i64, footskip: i64) -> Result<Dimens, String> {

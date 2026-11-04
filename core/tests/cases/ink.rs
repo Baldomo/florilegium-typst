@@ -28,7 +28,7 @@ fn finish(mut out: String) -> String {
 }
 fn c3(out: &mut String, c: Color) { say(out, &c) }
 
-// the xcolor values of svg.lua's html(), as the Lua computes them
+// the xcolor values of florilegium-svg.lua's html(), as the Lua computes them
 fn html(h: &str) -> Result<Color, String> {
     Ok(match h {
         "2456C4" => [0.14119000000000001, 0.33724999999999999, 0.76863000000000004],

@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
-//! grow.lua: the grown composition of florilegium.
+//! florilegium-grow.lua: the grown composition of florilegium.
 //!
 //! A plant, not a packing. Everything grows from one root in the bottom-left corner of
 //! the page: long stems sway up the margin column, leaves hang at their nodes, and a

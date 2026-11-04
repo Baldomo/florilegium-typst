@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
-//! ink.lua: the drawing core. Geometry is computed here and written as PDF path
+//! florilegium-ink.lua: the drawing core. Geometry is computed here and written as PDF path
 //! operators; `svg.rs` turns them into SVG.
 use crate::fmt::fixed;
 use std::cell::{Cell, RefCell};
@@ -342,7 +342,7 @@ pub enum Kind { Stem, #[default] Bloom, Overlay }
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Phase { Stems, Ghost, Branch, Fill, Accent, Tail, Marks, Fall }
 
-/// The animation event a tag refers to: the table grow.lua builds (kind, phase, parent,
+/// The animation event a tag refers to: the table florilegium-grow.lua builds (kind, phase, parent,
 /// the fields its timing reads) and a theme may build with just `t0` and `dur`.
 /// Events are shared and mutated after creation, as the Lua tables are. `t0` is NaN
 /// until the schedule has placed the event (Lua's nil).

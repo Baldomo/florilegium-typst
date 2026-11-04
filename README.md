@@ -3,7 +3,7 @@ Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
 # florilegium (Typst)
 
 Procedurally generated Delft-blue floral page margins for Typst: a port of
-[florilegium](https://github.com/kevinraymond/florilegium) (LaTeX/LuaLaTeX, version 1.2).
+[florilegium](https://github.com/kevinraymond/florilegium) (LaTeX/LuaLaTeX, version 1.3).
 No image files: every petal, leaf and stem is a parametric curve computed by a wasm
 plugin (a Rust port of the original Lua) while the document is compiled, painted like a
 watercolor, and drawn as one SVG behind each page. Every page gets its own garden.
@@ -176,7 +176,7 @@ Look at rendered pages too: `typst compile examples/demo.typ --root . --format p
 
 `geometry.to-sp` reproduces `scan_dimen` exactly for any length that is a short decimal in bp, mm, cm, in or TeX pt, and rounds only otherwise. The table below is what plain rounding would give, not what `to-sp` returns for these values.
 
-The core lays the page out in scaled points (sp), the way `svg.lua` and the geometry
+The core lays the page out in scaled points (sp), the way `florilegium-svg.lua` and the geometry
 package do, and the Typst layer converts lengths with `round(bp * 72.27/72 * 65536)`.
 TeX's `scan_dimen` (`svg::sp`) truncates the carried remainder instead of rounding it, so
 the two disagree by 1 sp (about 5e-7 cm, invisible) for some values. Measured by
@@ -195,14 +195,14 @@ Typst's `pt` is TeX's `bp`):
 | a4 (210mm) | 39158276 | 39158276 | 0 |
 | letter (8.5in) | 40258437 | 40258437 | 0 |
 
-So a Typst page with the default margins is not byte-identical to `svg.lua`'s page in the
-last digit of some coordinates; use `svg.lua`-style lengths (`Dimens::from_margins` with
+So a Typst page with the default margins is not byte-identical to `florilegium-svg.lua`'s page in the
+last digit of some coordinates; use `florilegium-svg.lua`-style lengths (`Dimens::from_margins` with
 `svg::sp`) where byte equality matters.
 
 ### The wasm plugin against the native build
 
 `core/tests/wasm.rs` runs `src/florilegium.wasm` (`make wasm`) in wasmi and compares the
-SVG of `page` for the `svg.lua --seed N` pages, N = 1..8 (default A4 layout), with the
+SVG of `page` for the `florilegium-svg.lua --seed N` pages, N = 1..8 (default A4 layout), with the
 native result. Measured with rust 1.99.1, native glibc libm: 0 differing bytes in all eight
 pages (2.6 to 3.1 MB each). Rust's wasm std uses compiler-builtins' libm for `sin`, `cos`,
 `powf`, `exp`, ...; none of the seeds tried shows a one-ulp difference after the 1-decimal

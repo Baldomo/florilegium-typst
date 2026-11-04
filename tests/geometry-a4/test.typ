@@ -4,7 +4,7 @@
 #let args = (mode: "grown", seed: 1)
 #show: florilegium.with(..args)
 
-// svg.lua --seed 1: `wc -c` and `head -c 200`
+// florilegium-svg.lua --seed 1: `wc -c` and `head -c 200`
 #context {
   let out = garden.page-out(garden.cfg(..args))
   assert.eq(out.svg.len(), 3076537)

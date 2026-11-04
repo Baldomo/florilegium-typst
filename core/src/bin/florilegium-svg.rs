@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
-//! The command line of svg.lua: `florilegium-svg --seed 7 > margin.svg` (for debugging).
+//! The command line of florilegium-svg.lua: `florilegium-svg --seed 7 > margin.svg` (for debugging).
 use florilegium_core::svg;
 
 fn main() {

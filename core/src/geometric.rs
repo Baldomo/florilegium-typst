@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
-//! theme-geometric.lua: the same plant, cut from flat shapes with straight edges.
+//! florilegium-theme-geometric.lua: the same plant, cut from flat shapes with straight edges.
 //!
 //! grow.rs draws every primitive through the current theme, so the garden grows exactly
 //! as it does with flora; only the drawing changes. Stems are straight runs, leaves kites
@@ -690,7 +690,7 @@ fn spray(rng: &Rng, s: f64, n0: f64, n1: f64, spread: f64, f: &dyn Fn(f64)) {
     }
 }
 
-/// `M.motifs`: the sprays of grow.lua on straight stalks, and the crystal
+/// `M.motifs`: the sprays of florilegium-grow.lua on straight stalks, and the crystal
 pub fn motifs(mut rows: Vec<Motif>, _f: &Flora) -> Vec<Motif> {
     for m in rows.iter_mut() {
         match m.name.as_str() {

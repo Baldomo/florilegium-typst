@@ -167,13 +167,16 @@ paper, $t |-> t + 0.62(1 - t)$, and without their fine detail, which give the co
 
 #text(weight: "bold")[3.2.2#h(1em)Building and sharing]
 
-The package is `florilegium.sty` with nine Lua files beside it: `ink.lua`
-(geometry, color and PDF output), `flora.lua` (the primitives),
-`authored.lua` and `grow.lua` (the two compositions), `initial.lua`
-(the decorated initials), two themes and the figures one of them draws from
-(`theme-geometric.lua`: the same plant cut from flat shapes;
-`theme-math.lua`: figures, symbols and equations cascading down the margin;
-`figures.lua`) and `florilegium.lua` (the glue to TeX). It needs LuaLaTeX and one compilation, at
+The package is `florilegium.sty` with nine Lua files beside it. Of these,
+`florilegium.lua` is the glue to TeX. The names of the other eight begin with
+`florilegium-`, because TeX finds a file by its bare name, the document's folder
+first, and a generic name would lose to a file of the author's own. After the prefix come
+`ink` (geometry, color and PDF output), `flora`
+(the primitives), `authored` and `grow` (the two compositions),
+`initial` (the decorated initials), and two themes with the figures one of them
+draws from (`theme-geometric`, the same plant cut from flat shapes;
+`theme-math`, figures, symbols and equations cascading down the margin;
+`figures`). It needs LuaLaTeX and one compilation, at
 about a second per page. To share it, the three routes that work are, in increasing order
 of effort: paste the files into a blank Overleaf project with the compiler set to
 LuaLaTeX and share the link; put them in a Git repository with a continuous integration

@@ -30,7 +30,7 @@ pub fn dimens(a: &PageArgs) -> Value {
     ])
 }
 
-/// the page arguments of `svg.lua --seed N` (the default A4 layout) as the plugin takes them
+/// the page arguments of `florilegium-svg.lua --seed N` (the default A4 layout) as the plugin takes them
 pub fn page_args(seed: i64) -> Value {
     let cli = florilegium_core::svg::options(&["--seed".to_string(), seed.to_string()]).unwrap();
     let a = cli.page;

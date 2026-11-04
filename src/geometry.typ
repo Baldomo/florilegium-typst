@@ -3,7 +3,7 @@
 
 // TeX's scaled points (sp, 1/65536 TeX pt), the unit of the core's `dimens`.
 #let _units = (
-  // (unit, bp per unit, numerator, denominator) as in svg.lua's `units`: TeX scans
+  // (unit, bp per unit, numerator, denominator) as in florilegium-svg.lua's `units`: TeX scans
   // `<n><unit>` as n * num/den TeX points, carrying the remainder of the division.
   ("bp", 1.0, 7227, 7200),
   ("mm", 72 / 25.4, 7227, 2540),
@@ -12,7 +12,7 @@
   ("pt", 72 / 72.27, 1, 1),
 )
 
-// svg.lua's `M.sp` (TeX's scan_dimen) for a decimal with at most five fractional digits:
+// florilegium-svg.lua's `M.sp` (TeX's scan_dimen) for a decimal with at most five fractional digits:
 // the fraction is rounded to 2^-16, then the unit's ratio is applied with the remainder
 // carried. `n` is the decimal times 100000.
 #let _scan-dimen(n, num, den) = {
@@ -91,7 +91,7 @@
 /// The `dimens` the plugin's `page` takes (integers in sp, as `\geometry` leaves them),
 /// from the paper size, the margins of this page as `resolve-margin` returns them, and
 /// the head and foot distances. The text block starts at `left`; `topmargin` is what is
-/// left of the top margin above the header (svg.lua's `from_margins`). Both side margins
+/// left of the top margin above the header (florilegium-svg.lua's `from_margins`). Both side margins
 /// get the same value: the Typst layer reports the margins as laid out on this very page.
 #let dimens(page-width, page-height, margins, headheight, headsep, footskip) = {
   let sp = to-sp

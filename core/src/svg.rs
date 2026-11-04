@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
-//! svg.lua: a florilegium page as SVG, without TeX. ink.rs writes PDF content streams as
+//! florilegium-svg.lua: a florilegium page as SVG, without TeX. ink.rs writes PDF content streams as
 //! always and `translate` reads them back (the few operators ink uses) and writes SVG
 //! elements; `page` lays the page out as LuaLaTeX and the geometry package would and runs
 //! the glue (glue.rs) on it. Lengths are scanned as TeX scans them (`sp`).
@@ -118,7 +118,7 @@ enum A<'a> { S(&'a str), Arr(Vec<&'a str>) }
 
 fn hex(r: &str, g: &str, b: &str) -> Result<[u8; 7], String> {
     let c = |v: &str| -> Result<u8, String> {
-        let x: f64 = v.parse().map_err(|_| format!("florilegium: svg.lua: bad number '{v}'"))?;
+        let x: f64 = v.parse().map_err(|_| format!("florilegium: florilegium-svg.lua: bad number '{v}'"))?;
         Ok(((x * 255.0 + 0.5).floor() as i64).clamp(0, 255) as u8)
     };
     const H: &[u8; 16] = b"0123456789abcdef";
@@ -144,7 +144,7 @@ pub fn translate(stream: &str, out: &mut Vec<String>, id: &str) -> Result<(), St
     let mut arr: Option<Vec<&str>> = None;
     let mut nclip = 0;
     let mut clip = false;
-    let bad = || "florilegium: svg.lua: malformed content stream".to_string();
+    let bad = || "florilegium: florilegium-svg.lua: malformed content stream".to_string();
     for t in stream.split_ascii_whitespace() {
         let c = t.as_bytes()[0];
         if arr.is_some() || c == 91 {
@@ -237,7 +237,7 @@ pub fn translate(stream: &str, out: &mut Vec<String>, id: &str) -> Result<(), St
                     st.mult = mult;
                 }
                 "J" | "j" => {}
-                _ => return Err(format!("florilegium: svg.lua cannot translate the PDF operator '{t}'")),
+                _ => return Err(format!("florilegium: florilegium-svg.lua cannot translate the PDF operator '{t}'")),
             }
             args.clear();
         }
@@ -384,7 +384,7 @@ pub struct Cli { pub page: PageArgs, pub out: Option<String>, pub help: bool }
 
 fn tonumber(s: &str) -> Option<f64> { s.trim().parse::<f64>().ok() }
 
-/// svg.lua's main(): the options of the command line as page arguments (`-h` and `-o` are
+/// florilegium-svg.lua's main(): the options of the command line as page arguments (`-h` and `-o` are
 /// reported in `Cli`)
 pub fn options(argv: &[String]) -> Result<Cli, String> {
     let flags = ["twoside", "novisitors", "nohead", "authored"];

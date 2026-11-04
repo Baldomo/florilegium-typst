@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
-//! initial.lua: a decorated initial, the letter's outline read from an OpenType font
+//! florilegium-initial.lua: a decorated initial, the letter's outline read from an OpenType font
 //! (with ttf-parser, standing in for luaotfload's `loadshapes`) and painted like a petal,
 //! a vine over and under its strokes, leaves and florets in the gaps, a double frame.
 //! Drawn in a local frame of centimeters, [0,S] x [0,S], under the current ink transform.

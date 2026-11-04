@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
-//! flora.lua: the primitives of florilegium, drawn with ink.rs.
+//! florilegium-flora.lua: the primitives of florilegium, drawn with ink.rs.
 //!
 //! Every primitive draws in its own local frame (centimeters, origin at its base or
 //! center, pointing along +y unless noted) under the current ink transform, and takes
@@ -11,7 +11,7 @@ type Pt = [f64; 2];
 
 const RAD: f64 = PI / 180.0;
 
-/// The option table of the primitives: one field per key flora.lua reads. A flag
+/// The option table of the primitives: one field per key florilegium-flora.lua reads. A flag
 /// the Lua tests as `o.x ~= false` is an `Option<bool>` (`None` and `Some(true)` differ
 /// only where the Lua tells them apart: `fork`).
 #[derive(Clone, Default)]

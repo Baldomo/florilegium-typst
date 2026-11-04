@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
-//! theme-math.lua: a theme that is not a plant: mathematics cascading down the margin and
+//! florilegium-theme-math.lua: a theme that is not a plant: mathematics cascading down the margin and
 //! across the bottom of the page. Shapes, symbols and equations (set as TeX captions),
 //! overlapping a little so they blend: one large figure where the column meets the bottom,
 //! families flowing down the column toward it, equations along the bottom and under the text,

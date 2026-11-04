@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Kevin Raymond (florilegium); Typst port. MIT License.
-//! Port of figures.lua: mathematical figures for the math and geometric themes.
+//! Port of florilegium-figures.lua: mathematical figures for the math and geometric themes.
 //!
 //! Parameters are `Vec<f64>`/`&[f64]` throughout. Where the Lua mixes in other types they are
 //! encoded as numbers: booleans are 1.0/0.0 (a missing trailing entry is nil), and the index
