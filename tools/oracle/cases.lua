@@ -65,8 +65,8 @@ end, function(id)
 end)
 
 -- ---------------------------------------------------------------- ink
-local ink = require("ink")
-local svg = require("svg")
+local ink = require("florilegium-ink")
+local svg = require("florilegium-svg")
 local sfmt = string.format
 
 local function G(x) return sfmt("%.17g", x) end
@@ -82,7 +82,7 @@ local function flat(out, label, pts)
 end
 local function finish(out) return table.concat(out, "\n") .. "\n=====\n" .. common.streams() end
 
--- an HTML color as svg.lua's html() hands it to ink (xcolor's n/255 to five decimals)
+-- an HTML color as florilegium-svg.lua's html() hands it to ink (xcolor's n/255 to five decimals)
 local function print_scaled(s)
   local o, delta = { tostring(s // 65536), "." }, 10
   s = 10 * (s % 65536) + 5
@@ -317,7 +317,7 @@ end, function(id)
 end)
 
 -- ---------------------------------------------------------------- flora
-local flora = require("flora")
+local flora = require("florilegium-flora")
 
 -- name, size key, sizes (bytes.lua, a small ORNAMENT size, a large one), then option values
 local FLORA = {
@@ -462,8 +462,8 @@ end, function(id)
 end)
 
 -- ---------------------------------------------------------------- geometric
--- the primitives of theme-geometric.lua, as the flora family drives flora's
-local geo = require("theme-geometric")
+-- the primitives of florilegium-theme-geometric.lua, as the flora family drives flora's
+local geo = require("florilegium-theme-geometric")
 local GEO = {
   { "flower", "s", { 1.2, 0.16, 2.4 }, { petals = { 5, 6, 8 }, style = { 1, 2 }, tone = { 0.2, 0.5 } } },
   { "lily", "s", { 1.1, 0.21, 2.2 }, { tilt = { 0.3, 0.7 }, tone = { 0.25, 0.45 } } },
@@ -560,7 +560,7 @@ end, function(id)
 end)
 
 -- ---------------------------------------------------------------- figures
-local figs = require("figures")
+local figs = require("florilegium-figures")
 local FIGS, FAMS = figs.figures, figs.families
 local FIG_RS = { "0.5", "1.2" }
 
@@ -700,7 +700,7 @@ end)
 
 -- ---------------------------------------------------------------- grow
 -- the geometry of tools/ident.lua; `anim` cases replay the recording as animcheck.lua does
-local grow = require("grow")
+local grow = require("florilegium-grow")
 local GROW_MARKS = { { kind = "heading", arg = 1, y = 20 }, { kind = "heading", arg = 2, y = 14 }, { kind = "bloom", arg = "", y = 9 }, { kind = "bloom", arg = "umbel", y = 6 } }
 local GROW_CASES = {
   { name = "summer" },
@@ -829,7 +829,7 @@ end)
 
 -- ---------------------------------------------------------------- authored
 -- the same geometry; the page writes its own streams and returns nothing
-local authored = require("authored")
+local authored = require("florilegium-authored")
 local AUTH_CASES = {}
 for s = 1, 7 do AUTH_CASES[#AUTH_CASES + 1] = { seed = s, name = "plain" } end
 for s = 1, 2 do AUTH_CASES[#AUTH_CASES + 1] = { seed = s, name = "novis", visitors = false } end
@@ -860,8 +860,8 @@ end, function(id)
 end)
 
 -- ---------------------------------------------------------------- math
--- theme-math.lua: its page composition's captions, and its flora table by name
-local maththeme = require("theme-math")
+-- florilegium-theme-math.lua: its page composition's captions, and its flora table by name
+local maththeme = require("florilegium-theme-math")
 local MATH_R = { "0.5", "1.2" }
 local MATH_FAM_ONLY = {}
 do
@@ -917,7 +917,7 @@ M.register("math", function()
   return ids
 end, function(id)
   local name, rest = id:match("^math/([^/]+)/(.*)$")
-  local grow = require("grow")
+  local grow = require("florilegium-grow")
   if name == "captions" then
     local seed, spill, case = rest:match("^seed=(%d+)/spill=(%d)/case=(.+)$")
     local g = { pw = 21, ph = 29.7, textleft = 6.8, textright = 18.8, ytop = 25.4, ybot = 3.0 }
@@ -991,7 +991,7 @@ local function read_shapes()
 end
 kpse = { find_file = function(name) return name end }
 fonts = { handlers = { otf = { readers = { loadshapes = function() return read_shapes() end } } } }
-local initial = require("initial")
+local initial = require("florilegium-initial")
 
 M.register("initial", function()
   local ids = {}
@@ -1015,9 +1015,9 @@ end, function(id)
 end)
 
 -- ---------------------------------------------------------------- page glue and SVG
--- florilegium.lua and svg.lua under the TeX stubs. An id after the family is a list of
--- `key=value` or bare `flag` segments, which become `--key value` / `--flag` for svg.lua's
--- own command line parser: `svg/seed=7/theme=math/twoside` is `svg.lua --seed 7 --theme math --twoside`.
+-- florilegium.lua and florilegium-svg.lua under the TeX stubs. An id after the family is a list of
+-- `key=value` or bare `flag` segments, which become `--key value` / `--flag` for florilegium-svg.lua's
+-- own command line parser: `svg/seed=7/theme=math/twoside` is `florilegium-svg.lua --seed 7 --theme math --twoside`.
 node.id = function(name) return name end
 node.subtype = function(name) return name end
 local fl = require("florilegium")
@@ -1031,7 +1031,7 @@ local function svg_argv(rest)
   return argv
 end
 
--- svg.lua's main, with its standard streams captured; hook(page results) sees what page() returns
+-- florilegium-svg.lua's main, with its standard streams captured; hook(page results) sees what page() returns
 local function svg_main(argv, hook)
   local buf = {}
   local so, se = io.stdout, io.stderr
@@ -1042,7 +1042,7 @@ local function svg_main(argv, hook)
   local ok, code = pcall(svg.main, argv)
   io.stdout, io.stderr, svg.page = so, se, orig
   if not ok then error(code, 0) end
-  if code ~= 0 then error("svg.lua failed: " .. table.concat(argv, " "), 0) end
+  if code ~= 0 then error("florilegium-svg.lua failed: " .. table.concat(argv, " "), 0) end
   return table.concat(buf)
 end
 
